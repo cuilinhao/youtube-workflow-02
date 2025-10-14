@@ -16,6 +16,7 @@ function isDashboardTab(value: string): value is DashboardTab {
   return (
     value === 'text-to-image' ||
     value === 'image-to-video' ||
+    value === 'video-workflow' ||
     value === 'settings' ||
     value === 'style-library' ||
     value === 'reference-library' ||
@@ -68,6 +69,22 @@ export function MainDashboard() {
                 <p className="text-sm text-gray-600">使用 Veo3 将图片转换为视频</p>
               </div>
               <VideoTaskBoard />
+            </div>
+          )}
+
+          {activeTab === 'video-workflow' && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold text-gray-900">视频生成工作流</h2>
+                <p className="text-sm text-gray-600">视频生成工作流程管理</p>
+              </div>
+              <div className="min-h-[600px] bg-green-100 rounded-lg border-2 border-green-200 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🎬</div>
+                  <h3 className="text-xl font-semibold text-green-800 mb-2">视频生成工作流</h3>
+                  <p className="text-green-600">工作流内容区域</p>
+                </div>
+              </div>
             </div>
           )}
 

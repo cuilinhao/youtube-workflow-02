@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 export type DashboardTab =
   | 'text-to-image'
   | 'image-to-video'
+  | 'video-workflow'
   | 'settings'
   | 'style-library'
   | 'reference-library'
@@ -29,6 +30,12 @@ export function LeftPanel({ activeTab, onTabChange }: LeftPanelProps) {
       title: '批量图生视频',
       icon: '📹',
       description: 'Veo3 图片转视频',
+    },
+    {
+      id: 'video-workflow' as const,
+      title: '视频生成工作流',
+      icon: '🎬',
+      description: '视频生成工作流程管理',
     },
     {
       id: 'settings' as const,
