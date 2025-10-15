@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     const effectiveScript = truncated ? trimmed.slice(0, 4000) : trimmed;
 
     const estimatedShots = Math.ceil(effectiveScript.length / 200);
-    const shotCount = Math.min(Math.max(estimatedShots || 1, 16), 32);
+    // 根据脚本内容智能判断分镜数量，支持1-50个分镜
+    const shotCount = Math.min(Math.max(estimatedShots || 1, 1), 50);
 
     console.info('[ShotPrompts] Incoming request', {
       originalLength: script.length,
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
           {
             type: 'text',
             text:
-              `请基于以下中文脚本生成 ${shotCount} 个镜头描述，最多 40 个，最少 1 个，严格保持 shot_id 顺序：\n\n` +
+              `请基于以下中文脚本生成 ${shotCount} 个镜头描述，最多 50 个，最少 1 个，严格保持 shot_id 顺序：\n\n` +
               `${effectiveScript}\n\n` +
               '确保：\n' +
               '1. 输出为 JSON 数组。\n' +
@@ -77,10 +78,10 @@ export async function POST(request: NextRequest) {
       count: parsed.length,
     });
 
-    if (parsed.length < 16 || parsed.length > 32) {
+    if (parsed.length < 1 || parsed.length > 50) {
       const error: ApiError = {
         code: 'E_JSON_SCHEMA',
-        hint: `镜头数量不符合规范，应在16至32之间，实际为${parsed.length}`,
+        hint: `镜头数量不符合规范，应在1至50之间，实际为${parsed.length}`,
         retryable: true,
       };
       return NextResponse.json(error, { status: 400 });

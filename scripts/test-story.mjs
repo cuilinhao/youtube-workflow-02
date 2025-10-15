@@ -7,7 +7,9 @@ function buildMessages(script) {
   const trimmed = script.trim();
   const truncated = trimmed.length > 4000;
   const effective = truncated ? trimmed.slice(0, 4000) : trimmed;
-  const shotCount = Math.min(Math.max(Math.ceil(effective.length / 200) || 1, 16), 32);
+  // const shotCount = Math.min(Math.max(Math.ceil(effective.length / 200) || 1, 16), 32);
+  const shotCount = Math.min(Math.max(Math.ceil(effective.length / 200) || 1, 1), 50);
+
 
   return {
     truncated,
@@ -25,7 +27,7 @@ function buildMessages(script) {
           {
             type: 'text',
             text:
-              `请基于以下中文脚本生成 ${shotCount} 个镜头描述，最多 42 个，最少 1 个，严格保持 shot_id 顺序：\n\n` +
+              `请基于以下中文脚本生成 ${shotCount} 个镜头描述，最多 50 个，最少 1 个，严格保持 shot_id 顺序：\n\n` +
               `${effective}\n\n` +
               '确保：\n' +
               '1. 输出为 JSON 数组。\n' +
