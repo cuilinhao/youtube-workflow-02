@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
           {
             type: 'text',
             text:
-              `请基于以下中文脚本生成 ${shotCount} 个镜头描述，最多 32 个，最少 16 个，严格保持 shot_id 顺序：\n\n` +
+              `请基于以下中文脚本生成 ${shotCount} 个镜头描述，最多 40 个，最少 1 个，严格保持 shot_id 顺序：\n\n` +
               `${effectiveScript}\n\n` +
               '确保：\n' +
               '1. 输出为 JSON 数组。\n' +
