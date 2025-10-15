@@ -710,7 +710,7 @@ export function VideoWorkflow() {
                   className="flex-1"
                 >
                   <ImageIcon className="mr-2 h-4 w-4" />
-                  批量生成图片 (Mock)
+                  批量生成图片
                 </Button>
                 <Button 
                   onClick={() => exportToCSV('shots')}
