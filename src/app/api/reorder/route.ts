@@ -31,6 +31,10 @@ export async function POST(request: NextRequest) {
     const reorderedImages: GeneratedImage[] = [];
     const mapping: { [oldShotId: string]: string } = {};
 
+    console.info('[Reorder] Incoming images', {
+      count: images.length,
+    });
+
     images.forEach((image: GeneratedImage, index: number) => {
       const newShotId = `shot_${(index + 1).toString().padStart(3, '0')}`;
       const oldShotId = image.shot_id;
@@ -41,6 +45,10 @@ export async function POST(request: NextRequest) {
         ...image,
         shot_id: newShotId
       });
+    });
+
+    console.info('[Reorder] Reorder completed', {
+      newCount: reorderedImages.length,
     });
 
     const response: ReorderResponse = {
@@ -57,7 +65,9 @@ export async function POST(request: NextRequest) {
       hint: '重排编号时发生内部错误',
       retryable: true
     };
-    
+
+    console.error('[Reorder] Unknown error', apiError);
+
     return NextResponse.json(apiError, { status: 500 });
   }
 }

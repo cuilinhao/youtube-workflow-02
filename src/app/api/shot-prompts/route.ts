@@ -23,6 +23,14 @@ export async function POST(request: NextRequest) {
     const estimatedShots = Math.ceil(effectiveScript.length / 200);
     const shotCount = Math.min(Math.max(estimatedShots || 1, 16), 32);
 
+    console.info('[ShotPrompts] Incoming request', {
+      originalLength: script.length,
+      trimmedLength: trimmed.length,
+      truncated,
+      effectiveLength: effectiveScript.length,
+      targetShotCount: shotCount,
+    });
+
     const messages = [
       {
         role: 'system' as const,
@@ -52,8 +60,10 @@ export async function POST(request: NextRequest) {
     const raw = await callOpenRouter(messages, {
       maxRetries: 2,
       temperature: 0.15,
-      maxTokens: 2048,
+      maxTokens: 4096,
     });
+
+    console.info('[ShotPrompts] Model raw response received');
 
     const jsonText = extractJsonArray(raw);
     let parsed = JSON.parse(jsonText) as ShotPrompt[];
@@ -62,6 +72,10 @@ export async function POST(request: NextRequest) {
       shot_id: `shot_${(index + 1).toString().padStart(3, '0')}`,
       image_prompt: normalizeLineEndings((shot.image_prompt ?? '').trim()).slice(0, 4000),
     }));
+
+    console.info('[ShotPrompts] Parsed shots', {
+      count: parsed.length,
+    });
 
     if (parsed.length < 16 || parsed.length > 32) {
       const error: ApiError = {
@@ -79,11 +93,19 @@ export async function POST(request: NextRequest) {
         hint: `Schema验证失败: ${validation.errors.join(', ')}`,
         retryable: false,
       };
+      console.error('[ShotPrompts] Schema validation failed', {
+        errors: validation.errors,
+      });
       return NextResponse.json(error, { status: 400 });
     }
 
     const response: ShotPromptsResponse = { shots: parsed };
     const headers = truncated ? { 'X-Input-Truncated': 'true' } : undefined;
+
+    console.info('[ShotPrompts] Returning response', {
+      totalShots: parsed.length,
+      truncated,
+    });
 
     return NextResponse.json(response, { headers });
   } catch (error) {
@@ -96,6 +118,7 @@ export async function POST(request: NextRequest) {
           hint: '模型请求过于频繁，请稍后重试',
           retryable: true,
         };
+        console.error('[ShotPrompts] Rate limited', apiError);
         return NextResponse.json(apiError, { status: 429 });
       }
 
@@ -105,7 +128,18 @@ export async function POST(request: NextRequest) {
           hint: '生成分镜超时，请稍后重试',
           retryable: true,
         };
+        console.error('[ShotPrompts] Timeout', apiError);
         return NextResponse.json(apiError, { status: 504 });
+      }
+
+      if (error.code === 'E_OUTPUT_TRUNCATED') {
+        const apiError: ApiError = {
+          code: 'E_MODEL_OUTPUT_TRUNCATED',
+          hint: '模型输出被截断，请重试或缩短镜头需求',
+          retryable: true,
+        };
+        console.error('[ShotPrompts] Output truncated', apiError);
+        return NextResponse.json(apiError, { status: 502 });
       }
 
       const apiError: ApiError = {
@@ -113,6 +147,7 @@ export async function POST(request: NextRequest) {
         hint: error.message || '生成分镜失败，请稍后重试',
         retryable: true,
       };
+      console.error('[ShotPrompts] Model internal error', apiError);
       return NextResponse.json(apiError, { status: 500 });
     }
 
@@ -122,6 +157,7 @@ export async function POST(request: NextRequest) {
         hint: '模型输出解析失败，请重试',
         retryable: true,
       };
+      console.error('[ShotPrompts] JSON parse error', apiError);
       return NextResponse.json(apiError, { status: 502 });
     }
 
@@ -130,6 +166,8 @@ export async function POST(request: NextRequest) {
       hint: '生成分镜时发生内部错误',
       retryable: true,
     };
+
+    console.error('[ShotPrompts] Unknown error', apiError);
 
     return NextResponse.json(apiError, { status: 500 });
   }

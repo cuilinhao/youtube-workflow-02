@@ -59,6 +59,14 @@ export async function POST(request: NextRequest) {
       .map((image, index) => `镜头${index + 1}：${image.shot_id}（图片 URL：${image.url}）`)
       .join('\n');
 
+    console.info('[VideoPrompts] Incoming request', {
+      scriptLength: script.length,
+      trimmedLength: trimmed.length,
+      truncated,
+      imageCount: images.length,
+      sequential: ensureSequentialShotIds(images),
+    });
+
     const messages = [
       {
         role: 'system' as const,
@@ -93,6 +101,8 @@ export async function POST(request: NextRequest) {
       maxTokens: 1536,
     });
 
+    console.info('[VideoPrompts] Model raw response received');
+
     const jsonText = extractJsonArray(raw);
     const parsed = JSON.parse(jsonText) as VideoPrompt[];
 
@@ -109,6 +119,7 @@ export async function POST(request: NextRequest) {
     const orderedPrompts: VideoPrompt[] = images.map((image) => {
       const prompt = promptMap.get(image.shot_id);
       if (!prompt) {
+        console.error('[VideoPrompts] Missing prompt for shot', image.shot_id);
         throw new SyntaxError(`缺少镜头 ${image.shot_id} 的提示词`);
       }
       return {
@@ -133,10 +144,16 @@ export async function POST(request: NextRequest) {
         hint: `Schema验证失败: ${validation.errors.join(', ')}`,
         retryable: false,
       };
+      console.error('[VideoPrompts] Schema validation failed', {
+        errors: validation.errors,
+      });
       return NextResponse.json(error, { status: 400 });
     }
 
     const response: VideoPromptsResponse = { prompts: orderedPrompts };
+    console.info('[VideoPrompts] Returning response', {
+      promptCount: orderedPrompts.length,
+    });
     return NextResponse.json(response);
   } catch (error) {
     console.error('Video prompts generation error:', error);
@@ -148,6 +165,7 @@ export async function POST(request: NextRequest) {
           hint: '模型请求过于频繁，请稍后重试',
           retryable: true,
         };
+        console.error('[VideoPrompts] Rate limited', apiError);
         return NextResponse.json(apiError, { status: 429 });
       }
 
@@ -157,7 +175,18 @@ export async function POST(request: NextRequest) {
           hint: '生成视频提示词超时，请稍后重试',
           retryable: true,
         };
+        console.error('[VideoPrompts] Timeout', apiError);
         return NextResponse.json(apiError, { status: 504 });
+      }
+
+      if (error.code === 'E_OUTPUT_TRUNCATED') {
+        const apiError: ApiError = {
+          code: 'E_MODEL_OUTPUT_TRUNCATED',
+          hint: '模型输出被截断，请重试或精简提示词长度',
+          retryable: true,
+        };
+        console.error('[VideoPrompts] Output truncated', apiError);
+        return NextResponse.json(apiError, { status: 502 });
       }
 
       const apiError: ApiError = {
@@ -165,6 +194,7 @@ export async function POST(request: NextRequest) {
         hint: error.message || '生成视频提示词失败，请稍后重试',
         retryable: true,
       };
+      console.error('[VideoPrompts] Model internal error', apiError);
       return NextResponse.json(apiError, { status: 500 });
     }
 
@@ -174,6 +204,7 @@ export async function POST(request: NextRequest) {
         hint: error.message || '模型输出解析失败，请重试',
         retryable: true,
       };
+      console.error('[VideoPrompts] JSON parse error', apiError);
       return NextResponse.json(apiError, { status: 502 });
     }
 
@@ -182,6 +213,8 @@ export async function POST(request: NextRequest) {
       hint: '生成视频提示词时发生内部错误',
       retryable: true,
     };
+
+    console.error('[VideoPrompts] Unknown error', apiError);
 
     return NextResponse.json(apiError, { status: 500 });
   }

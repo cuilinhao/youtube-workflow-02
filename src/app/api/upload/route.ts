@@ -9,6 +9,10 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
+    console.info('[Upload] Incoming upload request', {
+      hasFile: Boolean(file),
+    });
+
     if (!file) {
       const error: ApiError = {
         code: 'E_EMPTY_INPUT',
@@ -26,6 +30,9 @@ export async function POST(request: NextRequest) {
         hint: '不支持的文件类型，仅支持 JPEG、PNG、WebP、GIF',
         retryable: false
       };
+      console.error('[Upload] Invalid file type', {
+        providedType: file.type,
+      });
       return NextResponse.json(error, { status: 400 });
     }
 
@@ -37,6 +44,10 @@ export async function POST(request: NextRequest) {
         hint: '文件大小超过10MB限制',
         retryable: false
       };
+      console.error('[Upload] File too large', {
+        size: file.size,
+        maxSize,
+      });
       return NextResponse.json(error, { status: 400 });
     }
 
@@ -82,6 +93,12 @@ export async function POST(request: NextRequest) {
       source: 'uploaded'
     };
 
+    console.info('[Upload] Upload succeeded', {
+      shotId,
+      fileName,
+      size: file.size,
+    });
+
     const response: UploadResponse = { image };
 
     return NextResponse.json(response);
@@ -93,7 +110,9 @@ export async function POST(request: NextRequest) {
       hint: '文件上传时发生内部错误',
       retryable: true
     };
-    
+
+    console.error('[Upload] Unknown error', apiError);
+
     return NextResponse.json(apiError, { status: 500 });
   }
 }

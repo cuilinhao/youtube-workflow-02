@@ -35,6 +35,8 @@ async function fetchImage(prompt: ShotPrompt, signal: AbortSignal): Promise<Buff
   const encoded = encodeURIComponent(sanitizePrompt(prompt.image_prompt));
   const url = `${IMAGE_BASE_URL}/${encoded}?width=${WIDTH}&height=${HEIGHT}&seed=${encodeURIComponent(prompt.shot_id)}`;
 
+  console.info('[ImagesBatch] Fetching image', { shotId: prompt.shot_id, url });
+
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -70,6 +72,12 @@ async function processShot(options: {
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
     try {
+      console.info('[ImagesBatch] Processing shot', {
+        shotId: shot.shot_id,
+        attempt: attempt + 1,
+        maxAttempts: MAX_RETRIES + 1,
+      });
+
       const raw = await fetchImage(shot, controller.signal);
       const processed = await sharp(raw)
         .resize(WIDTH, HEIGHT, { fit: 'cover', position: sharp.strategy.attention })
@@ -82,6 +90,10 @@ async function processShot(options: {
       await fs.writeFile(filepath, processed);
 
       const imageUrl = `${origin}/generated/${filename}`;
+      console.info('[ImagesBatch] Shot processed successfully', {
+        shotId: shot.shot_id,
+        filename,
+      });
       return {
         image: {
           shot_id: shot.shot_id,
@@ -97,11 +109,22 @@ async function processShot(options: {
       }
 
       const wait = Math.min(200 * Math.pow(1.6, attempt - 1), 5000);
+      console.warn('[ImagesBatch] Shot processing failed, scheduling retry', {
+        shotId: shot.shot_id,
+        attempt,
+        waitMs: wait,
+        error: error instanceof Error ? error.message : String(error),
+      });
       await delay(wait);
     } finally {
       clearTimeout(timer);
     }
   }
+
+  console.error('[ImagesBatch] Shot processing failed after retries', {
+    shotId: shot.shot_id,
+    error: lastError instanceof Error ? lastError.message : lastError,
+  });
 
   return {
     failed: {
@@ -154,6 +177,11 @@ export async function POST(request: NextRequest) {
     const origin = buildOrigin(request);
     const outputDir = join(process.cwd(), 'public', 'generated');
     const limit = pLimit(MAX_CONCURRENCY);
+    console.info('[ImagesBatch] Starting batch generation', {
+      shotCount: shots.length,
+      aspectRatio,
+      origin,
+    });
     const tasks = (shots as ShotPrompt[]).map((shot) =>
       limit(() => processShot({ shot, origin, outputDir })),
     );
@@ -197,6 +225,9 @@ export async function POST(request: NextRequest) {
         hint: `Schema验证失败: ${validation.errors.join(', ')}`,
         retryable: false,
       };
+      console.error('[ImagesBatch] Schema validation failed', {
+        errors: validation.errors,
+      });
       return NextResponse.json(error, { status: 400 });
     }
 
@@ -204,6 +235,11 @@ export async function POST(request: NextRequest) {
     if (failed.length > 0) {
       response.failed = failed;
     }
+
+    console.info('[ImagesBatch] Returning response', {
+      successCount: images.length,
+      failedCount: failed.length,
+    });
 
     return NextResponse.json(response);
   } catch (error) {
@@ -214,6 +250,8 @@ export async function POST(request: NextRequest) {
       hint: '批量生成图片时发生内部错误',
       retryable: true,
     };
+
+    console.error('[ImagesBatch] Unknown error', apiError);
 
     return NextResponse.json(apiError, { status: 500 });
   }

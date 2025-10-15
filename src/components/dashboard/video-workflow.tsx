@@ -75,6 +75,9 @@ export function VideoWorkflow() {
   }, []);
 
   const applyReorderResult = useCallback((data: ReorderResponse) => {
+    console.info('[VideoWorkflow] Applying reorder result', {
+      mappingSize: Object.keys(data.mapping).length,
+    });
     setImages(data.images);
     let updatedShots: ShotPrompt[] | null = null;
     setShotPrompts(prev => {
@@ -96,6 +99,7 @@ export function VideoWorkflow() {
   }, [updateStepStatus]);
 
   const requestReorder = useCallback(async (payloadImages: GeneratedImage[]) => {
+    console.info('[VideoWorkflow] Requesting reorder API', { imageCount: payloadImages.length });
     const response = await fetch('/api/reorder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -109,6 +113,7 @@ export function VideoWorkflow() {
 
     const data: ReorderResponse = await response.json();
     applyReorderResult(data);
+    console.info('[VideoWorkflow] Reorder API succeeded', { imageCount: data.images.length });
     return data;
   }, [applyReorderResult]);
 
@@ -117,8 +122,10 @@ export function VideoWorkflow() {
       (image, index) => image.shot_id === `shot_${(index + 1).toString().padStart(3, '0')}`
     );
     if (sequential) {
+      console.info('[VideoWorkflow] Images already sequential');
       return images;
     }
+    console.info('[VideoWorkflow] Images not sequential, triggering reorder');
     const data = await requestReorder(images);
     return data.images;
   }, [images, requestReorder]);
@@ -137,9 +144,11 @@ export function VideoWorkflow() {
           const delay = Math.min(200 * Math.pow(1.6, attempt - 1), 5000);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
+        console.info('[VideoWorkflow] Operation attempt', { operationName, attempt: attempt + 1 });
         
         const result = await operation();
         setRetryCount(0); // 成功后重置重试计数
+        console.info('[VideoWorkflow] Operation succeeded', { operationName, attempt: attempt + 1 });
         return result;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('未知错误');
@@ -157,8 +166,10 @@ export function VideoWorkflow() {
   };
 
   const handleGenerateShots = async () => {
+    console.info('[VideoWorkflow] Start generating shot prompts', { scriptLength: script.length });
     if (!script.trim()) {
       setError('请输入故事脚本');
+      console.error('[VideoWorkflow] Missing script input');
       return;
     }
 
@@ -188,17 +199,21 @@ export function VideoWorkflow() {
       setShotPrompts(data.shots);
       updateStepStatus('shots', 'completed', data.shots);
       updateStepStatus('images', 'pending');
+      console.info('[VideoWorkflow] Shot prompts generated', { count: data.shots.length });
     } catch (err) {
       setError(err instanceof Error ? err.message : '生成分镜失败');
       updateStepStatus('shots', 'error');
+      console.error('[VideoWorkflow] Shot prompt generation failed', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGenerateImages = async () => {
+    console.info('[VideoWorkflow] Start batch image generation', { shotCount: shotPrompts.length });
     if (shotPrompts.length === 0) {
       setError('请先生成分镜');
+      console.error('[VideoWorkflow] Cannot generate images without shots');
       return;
     }
 
@@ -231,15 +246,18 @@ export function VideoWorkflow() {
       setImages(data.images);
       updateStepStatus('images', 'completed', data.images);
       updateStepStatus('edit', 'pending');
+      console.info('[VideoWorkflow] Images generated', { count: data.images.length, failed: data.failed?.length ?? 0 });
     } catch (err) {
       setError(err instanceof Error ? err.message : '批量出图失败');
       updateStepStatus('images', 'error');
+      console.error('[VideoWorkflow] Image generation failed', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleImageUpload = async (files: FileList) => {
+    console.info('[VideoWorkflow] Start image upload', { fileCount: files.length });
     const uploadPromises = Array.from(files).map(async (file) => {
       const formData = new FormData();
       formData.append('file', file);
@@ -260,14 +278,18 @@ export function VideoWorkflow() {
     try {
       const uploadedImages = await Promise.all(uploadPromises);
       setImages(prev => [...prev, ...uploadedImages]);
+      console.info('[VideoWorkflow] Upload succeeded', { uploadedCount: uploadedImages.length });
     } catch (err) {
       setError(err instanceof Error ? err.message : '上传失败');
+      console.error('[VideoWorkflow] Upload failed', err);
     }
   };
 
   const handleReorder = async () => {
+    console.info('[VideoWorkflow] Start reorder', { imageCount: images.length });
     if (images.length === 0) {
       setError('没有图片需要重排');
+      console.error('[VideoWorkflow] Reorder skipped due to empty image list');
       return;
     }
 
@@ -276,16 +298,20 @@ export function VideoWorkflow() {
 
     try {
       await requestReorder(images);
+      console.info('[VideoWorkflow] Reorder completed');
     } catch (err) {
       setError(err instanceof Error ? err.message : '重排失败');
+      console.error('[VideoWorkflow] Reorder failed', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGenerateVideoPrompts = async () => {
+    console.info('[VideoWorkflow] Start generating video prompts', { imageCount: images.length });
     if (images.length === 0) {
       setError('请先生成或上传图片');
+      console.error('[VideoWorkflow] Cannot generate video prompts without images');
       return;
     }
 
@@ -320,9 +346,11 @@ export function VideoWorkflow() {
       setVideoPrompts(data.prompts);
       updateStepStatus('video-prompts', 'completed', data.prompts);
       updateStepStatus('export', 'pending');
+      console.info('[VideoWorkflow] Video prompts generated', { count: data.prompts.length });
     } catch (err) {
       setError(err instanceof Error ? err.message : '生成视频提示词失败');
       updateStepStatus('video-prompts', 'error');
+      console.error('[VideoWorkflow] Video prompt generation failed', err);
     } finally {
       setIsLoading(false);
     }
@@ -471,9 +499,11 @@ export function VideoWorkflow() {
           }
         } else {
           setError('CSV文件格式不支持，请使用正确的分镜或视频提示词CSV格式');
+          console.error('[VideoWorkflow] CSV format not supported');
         }
-      } catch {
+      } catch (parseError) {
         setError('CSV文件解析失败');
+        console.error('[VideoWorkflow] CSV parse failed', parseError);
       }
     };
     reader.readAsText(file);
