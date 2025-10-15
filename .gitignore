@@ -33,6 +33,7 @@ yarn-error.log*
 
 # generated assets
 public/generated/
+public/uploads/
 
 # env files (can opt-in for committing if needed)
 .env*

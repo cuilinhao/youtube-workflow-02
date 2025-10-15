@@ -79,6 +79,57 @@ export interface VideoSettings {
   enableTranslation: boolean;
 }
 
+// 视频生成工作流相关类型
+export interface ShotPrompt {
+  shot_id: string;
+  image_prompt: string;
+}
+
+export interface GeneratedImage {
+  shot_id: string;
+  url: string;
+  source: 'generated' | 'uploaded';
+}
+
+export interface VideoPrompt {
+  shot_id: string;
+  image_prompt: string;
+}
+
+export interface FailedItem {
+  shot_id: string;
+  reason: string;
+}
+
+export interface ApiError {
+  code: string;
+  hint: string;
+  retryable?: boolean;
+  failed?: FailedItem[];
+}
+
+export interface ShotPromptsResponse {
+  shots: ShotPrompt[];
+}
+
+export interface BatchImagesResponse {
+  images: GeneratedImage[];
+  failed?: FailedItem[];
+}
+
+export interface UploadResponse {
+  image: GeneratedImage;
+}
+
+export interface ReorderResponse {
+  images: GeneratedImage[];
+  mapping: { [oldShotId: string]: string };
+}
+
+export interface VideoPromptsResponse {
+  prompts: VideoPrompt[];
+}
+
 export interface AppData {
   apiSettings: ApiSettings;
   styleLibrary: Record<string, StyleEntry>;

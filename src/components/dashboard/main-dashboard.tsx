@@ -7,6 +7,7 @@ import { LeftPanel, DashboardTab } from '@/components/layout/left-panel';
 import { Footer } from '@/components/layout/footer';
 import { PromptManager } from './prompt-manager';
 import { VideoTaskBoard } from './video-task-board';
+import { VideoWorkflow } from './video-workflow';
 import { SettingsCenter } from './settings-center';
 import { StyleLibrary } from './style-library';
 import { ReferenceLibrary } from './reference-library';
@@ -76,15 +77,9 @@ export function MainDashboard() {
             <div className="space-y-6">
               <div className="space-y-2">
                 <h2 className="text-2xl font-semibold text-gray-900">视频生成工作流</h2>
-                <p className="text-sm text-gray-600">视频生成工作流程管理</p>
+                <p className="text-sm text-gray-600">从文本脚本到视频提示词的完整工作流程</p>
               </div>
-              <div className="min-h-[600px] bg-green-100 rounded-lg border-2 border-green-200 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🎬</div>
-                  <h3 className="text-xl font-semibold text-green-800 mb-2">视频生成工作流</h3>
-                  <p className="text-green-600">工作流内容区域</p>
-                </div>
-              </div>
+              <VideoWorkflow />
             </div>
           )}
 
