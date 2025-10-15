@@ -43,7 +43,11 @@ interface WorkflowStep {
 }
 
 export function VideoWorkflow() {
-  const [script, setScript] = useState('');
+  const [script, setScript] = useState(`整个故事脚本只有一个角色A（橘猫tom），故事只有3个分镜，故事如下：
+
+橘猫tom在吃早饭
+橘猫tom背着书包走在街道上
+橘猫tom在教室内上课`);
   const [steps, setSteps] = useState<WorkflowStep[]>([
     { id: 'script', title: '输入脚本', description: '输入故事脚本', status: 'pending' },
     { id: 'shots', title: '生成分镜', description: 'AI 生成分镜 JSON', status: 'pending' },
