@@ -132,6 +132,9 @@ export function PromptManager() {
       api.startImageGeneration(payload),
     onSuccess: (response) => {
       if (response.success) {
+        if (response.warnings?.length) {
+          toast.warning(response.warnings.join('；'));
+        }
         toast.success('已提交图片生成任务');
         queryClient.invalidateQueries({ queryKey: ['prompts'] });
       } else {

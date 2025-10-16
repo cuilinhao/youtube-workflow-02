@@ -20,7 +20,8 @@ import {
   Video,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   ShotPrompt, 
@@ -28,11 +29,12 @@ import {
   VideoPrompt, 
   ApiError,
   ShotPromptsResponse,
-  BatchImagesResponse,
   UploadResponse,
   ReorderResponse,
-  VideoPromptsResponse
+  VideoPromptsResponse,
+  PromptEntry
 } from '@/lib/types';
+import { api } from '@/lib/api';
 
 interface WorkflowStep {
   id: string;
@@ -62,6 +64,7 @@ export function VideoWorkflow() {
   const [videoPrompts, setVideoPrompts] = useState<VideoPrompt[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [maxRetries] = useState(3);
@@ -223,36 +226,171 @@ export function VideoWorkflow() {
 
     setIsLoading(true);
     setError(null);
+    setWarning(null);
+    setRetryCount(0);
     updateStepStatus('images', 'in-progress');
 
     try {
-      const data = await retryWithBackoff(
-        async () => {
-          const response = await fetch('/api/images/batch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              shots: shotPrompts, 
-              aspectRatio: '9:16' 
-            })
-          });
+      const existing = await api.getPrompts();
+      const existingMap = new Map<string, PromptEntry>(existing.prompts.map((item) => [item.number, item]));
+      const shotToNumber = new Map<string, string>();
+      const numberToShot = new Map<string, string>();
+      const newShots: ShotPrompt[] = [];
+      const addPayload: { prompt: string; number: string }[] = [];
+      const updatePromises: Promise<unknown>[] = [];
 
-          if (!response.ok) {
-            const error: ApiError = await response.json();
-            throw new Error(error.hint);
+      shotPrompts.forEach((shot) => {
+        const targetNumber = shot.shot_id;
+        const matched = existingMap.get(targetNumber);
+        if (matched) {
+          shotToNumber.set(shot.shot_id, matched.number);
+          numberToShot.set(matched.number, shot.shot_id);
+          const needsUpdate =
+            matched.prompt.trim() !== shot.image_prompt.trim() ||
+            matched.status !== '等待中' ||
+            matched.localPath ||
+            matched.imageUrl ||
+            matched.errorMsg;
+          if (needsUpdate) {
+            updatePromises.push(
+              api.updatePrompt(matched.number, {
+                prompt: shot.image_prompt,
+                status: '等待中',
+                localPath: '',
+                imageUrl: '',
+                errorMsg: '',
+                actualFilename: '',
+              })
+            );
           }
+        } else {
+          newShots.push(shot);
+          addPayload.push({ prompt: shot.image_prompt, number: targetNumber });
+        }
+      });
 
-          return await response.json() as BatchImagesResponse;
-        },
-        '批量出图'
+      if (addPayload.length > 0) {
+        const created = await api.addPrompts(addPayload);
+        created.prompts.forEach((entry, index) => {
+          const shot = newShots[index];
+          const finalNumber = entry.number;
+          shotToNumber.set(shot.shot_id, finalNumber);
+          numberToShot.set(finalNumber, shot.shot_id);
+          if (finalNumber !== shot.shot_id) {
+            console.warn('[VideoWorkflow] Prompt number adjusted to avoid conflict', {
+              requested: shot.shot_id,
+              assigned: finalNumber,
+            });
+          }
+        });
+      }
+
+      if (updatePromises.length > 0) {
+        const updateResults = await Promise.allSettled(updatePromises);
+        const failed = updateResults.find((result) => result.status === 'rejected');
+        if (failed && failed.status === 'rejected') {
+          throw new Error(
+            failed.reason instanceof Error
+              ? `更新提示词失败: ${failed.reason.message}`
+              : '更新提示词失败'
+          );
+        }
+      }
+
+      if (shotPrompts.some((shot) => !shotToNumber.has(shot.shot_id))) {
+        throw new Error('未能同步全部分镜到提示词库，请稍后重试');
+      }
+
+      const numbersToGenerate = Array.from(new Set(Array.from(shotToNumber.values())));
+      if (!numbersToGenerate.length) {
+        throw new Error('没有可用于批量出图的提示词编号');
+      }
+
+      const generationResult = await retryWithBackoff(
+        () => api.startImageGeneration({ mode: 'selected', numbers: numbersToGenerate }),
+        '批量出图',
+        maxRetries
       );
 
-      setImages(data.images);
-      updateStepStatus('images', 'completed', data.images);
-      updateStepStatus('edit', 'pending');
-      console.info('[VideoWorkflow] Images generated', { count: data.images.length, failed: data.failed?.length ?? 0 });
+      if (!generationResult.success) {
+        throw new Error(generationResult.message ?? '批量出图任务提交失败');
+      }
+
+      if (generationResult.warnings?.length) {
+        const message = generationResult.warnings.join('；');
+        setWarning(message);
+        console.warn('[VideoWorkflow] Image generation warnings', { warnings: generationResult.warnings });
+      } else {
+        setWarning(null);
+      }
+
+      const POLL_INTERVAL = 4_000;
+      const MAX_WAIT = 10 * 60 * 1000; // 10 分钟超时
+      const startTime = Date.now();
+      const numbersSet = new Set(numbersToGenerate);
+
+      while (true) {
+        if (Date.now() - startTime > MAX_WAIT) {
+          throw new Error('批量出图任务超时，请稍后重试');
+        }
+
+        const { prompts } = await api.getPrompts();
+        const relevant = prompts.filter((prompt) => numbersSet.has(prompt.number));
+
+        if (relevant.length < numbersToGenerate.length) {
+          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
+          continue;
+        }
+
+        const failures = relevant.filter((prompt) => prompt.status === '失败');
+        if (failures.length > 0) {
+          const failedShots = failures.map((prompt) => {
+            const shotId = numberToShot.get(prompt.number) ?? prompt.number;
+            const reason = prompt.errorMsg?.trim();
+            return reason ? `${shotId}（${reason}）` : shotId;
+          });
+          console.error('[VideoWorkflow] Batch image generation failures', {
+            failures: failedShots,
+          });
+          throw new Error(`以下镜头生成失败: ${failedShots.join('、')}`);
+        }
+
+        const inProgress = relevant.some((prompt) => prompt.status !== '成功');
+        if (inProgress) {
+          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
+          continue;
+        }
+
+        const nextImages: GeneratedImage[] = shotPrompts
+          .map((shot) => {
+            const number = shotToNumber.get(shot.shot_id);
+            if (!number) return null;
+            const promptEntry = relevant.find((prompt) => prompt.number === number);
+            if (!promptEntry) return null;
+            const imageUrl = promptEntry.localPath ? `/${promptEntry.localPath}` : promptEntry.imageUrl ?? '';
+            if (!imageUrl) return null;
+            return {
+              shot_id: shot.shot_id,
+              url: imageUrl,
+              source: 'generated',
+            } as GeneratedImage;
+          })
+          .filter((item): item is GeneratedImage => item !== null);
+
+        if (!nextImages.length) {
+          throw new Error('出图成功但未找到可用图片路径');
+        }
+
+        setImages(nextImages);
+        updateStepStatus('images', 'completed', nextImages);
+        updateStepStatus('edit', 'pending');
+        console.info('[VideoWorkflow] Images generated via prompt manager', { count: nextImages.length });
+        break;
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '批量出图失败');
+      const message = err instanceof Error ? err.message : '批量出图失败';
+      setError(message);
+      setWarning(null);
       updateStepStatus('images', 'error');
       console.error('[VideoWorkflow] Image generation failed', err);
     } finally {
@@ -636,6 +774,14 @@ export function VideoWorkflow() {
               </div>
             )}
           </AlertDescription>
+        </Alert>
+      )}
+
+      {/* 告警提示 */}
+      {warning && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription>{warning}</AlertDescription>
         </Alert>
       )}
 

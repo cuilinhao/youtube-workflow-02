@@ -173,23 +173,114 @@ async function downloadImage(url: string, number: string, saveDir: string): Prom
   return { localPath: path.posix.join(relative), actualFilename: filename };
 }
 
-function pickActiveKey(data: AppData): ApiConfig {
-  const { apiSettings, keyLibrary } = data;
-  let target = apiSettings.currentKeyName ? keyLibrary[apiSettings.currentKeyName] : undefined;
-  if (!target) {
-    target = Object.values(keyLibrary)[0];
+function describeNetworkError(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return '接口连接超时';
   }
-  if (!target) {
+  if (error instanceof Error) {
+    const cause = (error as Error & { cause?: unknown }).cause;
+    const causeCode =
+      typeof cause === 'object' && cause !== null && 'code' in (cause as Record<string, unknown>)
+        ? ((cause as Record<string, unknown>).code as string | undefined)
+        : undefined;
+    const code = causeCode ?? ((error as Error & { code?: string }).code ?? '');
+    switch (code) {
+      case 'ECONNRESET':
+        return '网络连接被重置 (ECONNRESET)';
+      case 'ENOTFOUND':
+        return '无法解析接口域名 (ENOTFOUND)';
+      case 'ECONNREFUSED':
+        return '接口拒绝连接 (ECONNREFUSED)';
+      case 'ETIMEDOUT':
+        return '接口连接超时 (ETIMEDOUT)';
+      default:
+        return error.message || '网络请求失败';
+    }
+  }
+  return '网络请求失败';
+}
+
+async function ensureEndpointReachable(url: string, apiKey: string): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  try {
+    await fetch(url, {
+      method: 'HEAD',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+  } catch (error) {
+    const message = describeNetworkError(error);
+    const err = new Error(message);
+    (err as Error & { cause?: unknown }).cause = error;
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function resolveApiConfig(data: AppData): Promise<{ config: ApiConfig; diagnostics: string[] }> {
+  const { apiSettings, keyLibrary } = data;
+  const entries = Object.values(keyLibrary);
+
+  if (!entries.length) {
     throw new Error('未配置可用的 API 密钥');
   }
-  const platform = target.platform?.trim() || apiSettings.apiPlatform || '云雾';
-  const config = PLATFORM_CONFIGS[platform] ?? PLATFORM_CONFIGS['API易'];
-  return {
-    url: config.url,
-    model: config.model,
-    apiKey: target.apiKey,
-    platform,
-  };
+
+  const preferred = apiSettings.currentKeyName;
+  const ordered = preferred ? [...entries].sort((a, b) => (a.name === preferred ? -1 : b.name === preferred ? 1 : 0)) : [...entries];
+  const errors: string[] = [];
+
+  for (const entry of ordered) {
+    const platform = entry.platform?.trim() || apiSettings.apiPlatform || '云雾';
+    const config = PLATFORM_CONFIGS[platform] ?? PLATFORM_CONFIGS['API易'];
+    if (!config) {
+      errors.push(`${entry.name}: 不支持的平台 ${platform}`);
+      continue;
+    }
+
+    try {
+      await ensureEndpointReachable(config.url, entry.apiKey);
+      console.info('[ImageGeneration] Using API key', {
+        name: entry.name,
+        platform,
+        url: config.url,
+      });
+      await updateAppData((draft) => {
+        draft.apiSettings.currentKeyName = entry.name;
+        draft.apiSettings.apiPlatform = platform;
+        if (draft.keyLibrary[entry.name]) {
+          draft.keyLibrary[entry.name].lastUsed = new Date().toISOString();
+        }
+        return draft;
+      });
+      const diagnostics = errors.length
+        ? [...errors, `已自动切换至 ${entry.name}（${platform}）`]
+        : [];
+      return {
+        config: {
+          url: config.url,
+          model: config.model,
+          apiKey: entry.apiKey,
+          platform,
+        },
+        diagnostics,
+      };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      errors.push(`${entry.name}(${platform}): ${reason}`);
+      console.warn('[ImageGeneration] API endpoint unreachable', {
+        name: entry.name,
+        platform,
+        reason,
+      });
+    }
+  }
+
+  throw new Error(`所有可用密钥均无法连接，请检查网络或密钥配置：${errors.join('；')}`);
 }
 
 async function updatePrompt(number: string, patch: Partial<PromptEntry>) {
@@ -328,7 +419,7 @@ export async function generateImages({ mode, numbers }: GenerateImagesPayload) {
     return { success: false, message: '没有需要生成的提示词' };
   }
 
-  const apiConfig = pickActiveKey(data);
+  const { config: apiConfig, diagnostics } = await resolveApiConfig(data);
   const retryCount = data.apiSettings.retryCount ?? 0;
   const limit = pLimit(Math.max(1, data.apiSettings.threadCount ?? 1));
   const imageMap = collectImageMap(data.categoryLinks);
@@ -364,5 +455,5 @@ export async function generateImages({ mode, numbers }: GenerateImagesPayload) {
     ),
   );
 
-  return { success: true };
+  return { success: true, warnings: diagnostics.length ? diagnostics : undefined };
 }

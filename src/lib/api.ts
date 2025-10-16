@@ -158,7 +158,7 @@ export const api = {
       method: 'DELETE',
     }),
   startImageGeneration: (payload: { mode: 'new' | 'selected' | 'all'; numbers?: string[] }) =>
-    request<{ success: boolean; message?: string }>('/api/generate/images', {
+    request<{ success: boolean; message?: string; warnings?: string[] }>('/api/generate/images', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),

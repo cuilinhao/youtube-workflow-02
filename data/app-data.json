@@ -3,8 +3,8 @@
     "threadCount": 5,
     "retryCount": 3,
     "savePath": "public/generated_images",
-    "currentKeyName": "kie",
-    "apiPlatform": "KIE.AI"
+    "currentKeyName": "yunwu",
+    "apiPlatform": "云雾"
   },
   "styleLibrary": {
     "超写实风格": {
@@ -31,7 +31,16 @@
   },
   "currentStyle": "",
   "customStyleContent": "",
-  "categoryLinks": {},
+  "categoryLinks": {
+    "001": [
+      {
+        "name": "小女孩joo",
+        "path": "images/001/小女孩joo.png",
+        "createdAt": "2025-10-16T10:26:57.423Z",
+        "updatedAt": "2025-10-16T10:26:57.423Z"
+      }
+    ]
+  },
   "keyLibrary": {
     "kie": {
       "name": "kie",
@@ -45,7 +54,7 @@
       "apiKey": "sk-VnAoC18TCbaltpy8L9AODFlo30Us27cZvF9Xo2tmUtDzDueB",
       "platform": "云雾",
       "createdTime": "2025-09-27T14:12:04.825Z",
-      "lastUsed": "从未使用"
+      "lastUsed": "2025-10-16T10:30:49.964Z"
     }
   },
   "prompts": [
