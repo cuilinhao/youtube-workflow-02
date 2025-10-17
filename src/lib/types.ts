@@ -112,11 +112,6 @@ export interface ShotPromptsResponse {
   shots: ShotPrompt[];
 }
 
-export interface BatchImagesResponse {
-  images: GeneratedImage[];
-  failed?: FailedItem[];
-}
-
 export interface UploadResponse {
   image: GeneratedImage;
 }
@@ -148,4 +143,37 @@ export interface AppData {
 export interface UpdatePayload<T> {
   path: (string | number)[];
   value: T;
+}
+
+export interface ImageJob {
+  id: string;
+  prompt: string;
+  aspectRatio?: string;
+  refImages?: string[];
+  styleId?: string;
+  seed?: string | number;
+  width?: number;
+  height?: number;
+  meta?: Record<string, unknown>;
+}
+
+export interface OrchestrateOptions {
+  concurrency?: number;
+  retryCount?: number;
+  timeoutMs?: number;
+}
+
+export interface ImageResult {
+  jobId: string;
+  ok: boolean;
+  url?: string;
+  error?: { code: string; message: string; provider?: string };
+  elapsedMs?: number;
+}
+
+export interface BatchImagesResponse {
+  success: boolean;
+  results: ImageResult[];
+  failed: ImageResult[];
+  images: string[];
 }

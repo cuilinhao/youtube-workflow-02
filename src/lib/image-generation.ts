@@ -1,437 +1,42 @@
-import path from 'path';
-import { promises as fs } from 'fs';
-import pLimit from 'p-limit';
-import type { AppData, ImageReference, PromptEntry } from './types';
 import { readAppData, updateAppData } from './data-store';
+import type { ImageJob, PromptEntry } from './types';
+import { orchestrateGenerateImages } from './images/orchestrator';
 
-const PLATFORM_CONFIGS: Record<string, { url: string; model: string }> = {
-  云雾: {
-    url: 'https://yunwu.ai/v1/chat/completions',
-    model: 'gemini-2.5-flash-image-preview',
-  },
-  API易: {
-    url: 'https://vip.apiyi.com/v1/chat/completions',
-    model: 'gemini-2.5-flash-image-preview',
-  },
-  apicore: {
-    url: 'https://api.apicore.ai/v1/chat/completions',
-    model: 'gemini-2.5-flash-image',
-  },
-  'KIE.AI': {
-    url: 'https://api.kie.ai/v1/chat/completions',
-    model: 'gemini-2.5-flash-image-preview',
-  },
-};
-
-interface GenerateImagesPayload {
+export interface GenerateImagesPayload {
   mode: 'new' | 'selected' | 'all';
   numbers?: string[];
 }
 
-interface ApiConfig {
-  url: string;
-  model: string;
-  apiKey: string;
-  platform: string;
+interface PrepareImageJobsResult {
+  jobs: ImageJob[];
+  targets: PromptEntry[];
+  message?: string;
 }
 
-async function ensureDir(dir: string) {
-  await fs.mkdir(dir, { recursive: true });
-}
-
-function resolveSaveDir(savePath: string, fallback: string): string {
-  if (!savePath) return path.join(process.cwd(), fallback);
-  return path.isAbsolute(savePath) ? savePath : path.join(process.cwd(), savePath);
-}
-
-function collectImageMap(categoryLinks: AppData['categoryLinks']): Map<string, ImageReference> {
-  const map = new Map<string, ImageReference>();
-  Object.values(categoryLinks).forEach((items) => {
-    items.forEach((item) => {
-      if (item.name) {
-        map.set(item.name, item);
-      }
-    });
-  });
-  return map;
-}
-
-function extractImageNames(prompt: string, names: string[]): string[] {
-  const sorted = [...names].sort((a, b) => b.length - a.length);
-  return sorted.filter((name) => prompt.includes(name));
-}
-
-async function readLocalImageAsBase64(relativePath: string): Promise<string | null> {
-  const filePath = path.join(process.cwd(), relativePath.startsWith('public/') ? relativePath : path.join('public', relativePath));
-  try {
-    const buffer = await fs.readFile(filePath);
-    const ext = path.extname(filePath).toLowerCase();
-    const mime =
-      ext === '.jpg' || ext === '.jpeg'
-        ? 'image/jpeg'
-        : ext === '.webp'
-          ? 'image/webp'
-          : ext === '.gif'
-            ? 'image/gif'
-            : 'image/png';
-    return `data:${mime};base64,${buffer.toString('base64')}`;
-  } catch (error) {
-    console.warn('读取本地图片失败', relativePath, error);
-    return null;
-  }
-}
-
-function applyStyle(prompt: string, styleContent: string | undefined): string {
-  if (!styleContent?.trim()) return prompt;
-  return prompt.includes(styleContent.trim()) ? prompt : `${prompt}\n${styleContent.trim()}`;
-}
-
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    return response;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function parseImageFromContent(content: string): { base64?: string; url?: string } | null {
-  const base64Match = content.match(/!\[[^\]]*\]\((data:image\/[^;]+;base64,[^)]+)\)/);
-  if (base64Match) {
-    return { base64: base64Match[1] };
-  }
-  const downloadMatch = content.match(/\[点击下载\]\(([^)]+)\)/);
-  if (downloadMatch) {
-    return { url: downloadMatch[1] };
-  }
-  const imageMatch = content.match(/!\[[^\]]*\]\((https?:[^)]+)\)/);
-  if (imageMatch) {
-    return { url: imageMatch[1] };
-  }
-  return null;
-}
-
-async function saveBase64Image(base64: string, number: string, saveDir: string): Promise<{ localPath: string; actualFilename: string }> {
-  const [header, data] = base64.split(',', 2);
-  const ext =
-    header?.includes('image/jpeg') || header?.includes('image/jpg')
-      ? '.jpg'
-      : header?.includes('image/webp')
-        ? '.webp'
-        : header?.includes('image/gif')
-          ? '.gif'
-          : '.png';
-
-  await ensureDir(saveDir);
-  let filename = `${number}${ext}`;
-  let counter = 1;
-  while (true) {
-    const filepath = path.join(saveDir, filename);
-    try {
-      await fs.access(filepath);
-      filename = `${number}-${counter}${ext}`;
-      counter += 1;
-    } catch {
-      break;
-    }
-  }
-
-  const buffer = Buffer.from(data ?? '', 'base64');
-  const finalPath = path.join(saveDir, filename);
-  await fs.writeFile(finalPath, buffer);
-  const relative = path.relative(path.join(process.cwd(), 'public'), finalPath);
-  return { localPath: path.posix.join(relative), actualFilename: filename };
-}
-
-async function downloadImage(url: string, number: string, saveDir: string): Promise<{ localPath: string; actualFilename: string }> {
-  await ensureDir(saveDir);
-  const ext = path.extname(new URL(url).pathname) || '.png';
-  let filename = `${number}${ext}`;
-  let counter = 1;
-  while (true) {
-    const filepath = path.join(saveDir, filename);
-    try {
-      await fs.access(filepath);
-      filename = `${number}-${counter}${ext}`;
-      counter += 1;
-    } catch {
-      break;
-    }
-  }
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`下载图片失败: ${response.status}`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const finalPath = path.join(saveDir, filename);
-  await fs.writeFile(finalPath, buffer);
-  const relative = path.relative(path.join(process.cwd(), 'public'), finalPath);
-  return { localPath: path.posix.join(relative), actualFilename: filename };
-}
-
-function describeNetworkError(error: unknown): string {
-  if (error instanceof DOMException && error.name === 'AbortError') {
-    return '接口连接超时';
-  }
-  if (error instanceof Error) {
-    const cause = (error as Error & { cause?: unknown }).cause;
-    const causeCode =
-      typeof cause === 'object' && cause !== null && 'code' in (cause as Record<string, unknown>)
-        ? ((cause as Record<string, unknown>).code as string | undefined)
-        : undefined;
-    const code = causeCode ?? ((error as Error & { code?: string }).code ?? '');
-    switch (code) {
-      case 'ECONNRESET':
-        return '网络连接被重置 (ECONNRESET)';
-      case 'ENOTFOUND':
-        return '无法解析接口域名 (ENOTFOUND)';
-      case 'ECONNREFUSED':
-        return '接口拒绝连接 (ECONNREFUSED)';
-      case 'ETIMEDOUT':
-        return '接口连接超时 (ETIMEDOUT)';
-      default:
-        return error.message || '网络请求失败';
-    }
-  }
-  return '网络请求失败';
-}
-
-async function ensureEndpointReachable(url: string, apiKey: string): Promise<void> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8_000);
-  try {
-    await fetch(url, {
-      method: 'HEAD',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      cache: 'no-store',
-      signal: controller.signal,
-    });
-  } catch (error) {
-    const message = describeNetworkError(error);
-    const err = new Error(message);
-    (err as Error & { cause?: unknown }).cause = error;
-    throw err;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function resolveApiConfig(data: AppData): Promise<{ config: ApiConfig; diagnostics: string[] }> {
-  const { apiSettings, keyLibrary } = data;
-  const entries = Object.values(keyLibrary);
-
-  if (!entries.length) {
-    throw new Error('未配置可用的 API 密钥');
-  }
-
-  const preferred = apiSettings.currentKeyName;
-  const ordered = preferred ? [...entries].sort((a, b) => (a.name === preferred ? -1 : b.name === preferred ? 1 : 0)) : [...entries];
-  const errors: string[] = [];
-
-  for (const entry of ordered) {
-    const platform = entry.platform?.trim() || apiSettings.apiPlatform || '云雾';
-    const config = PLATFORM_CONFIGS[platform] ?? PLATFORM_CONFIGS['API易'];
-    if (!config) {
-      errors.push(`${entry.name}: 不支持的平台 ${platform}`);
-      continue;
-    }
-
-    try {
-      await ensureEndpointReachable(config.url, entry.apiKey);
-      console.info('[ImageGeneration] Using API key', {
-        name: entry.name,
-        platform,
-        url: config.url,
-      });
-      await updateAppData((draft) => {
-        draft.apiSettings.currentKeyName = entry.name;
-        draft.apiSettings.apiPlatform = platform;
-        if (draft.keyLibrary[entry.name]) {
-          draft.keyLibrary[entry.name].lastUsed = new Date().toISOString();
-        }
-        return draft;
-      });
-      const diagnostics = errors.length
-        ? [...errors, `已自动切换至 ${entry.name}（${platform}）`]
-        : [];
-      return {
-        config: {
-          url: config.url,
-          model: config.model,
-          apiKey: entry.apiKey,
-          platform,
-        },
-        diagnostics,
-      };
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      errors.push(`${entry.name}(${platform}): ${reason}`);
-      console.warn('[ImageGeneration] API endpoint unreachable', {
-        name: entry.name,
-        platform,
-        reason,
-      });
-    }
-  }
-
-  throw new Error(`所有可用密钥均无法连接，请检查网络或密钥配置：${errors.join('；')}`);
-}
-
-async function updatePrompt(number: string, patch: Partial<PromptEntry>) {
-  await updateAppData((data) => {
-    const prompt = data.prompts.find((item) => item.number === number);
-    if (prompt) {
-      Object.assign(prompt, patch, { updatedAt: new Date().toISOString() });
-    }
-    return data;
-  });
-}
-
-async function processPrompt(options: {
-  entry: PromptEntry;
-  apiConfig: ApiConfig;
-  retryCount: number;
-  imageMap: Map<string, ImageReference>;
-  styleContent?: string;
-  saveDir: string;
-}) {
-  const { entry, apiConfig, retryCount, imageMap, styleContent, saveDir } = options;
-  const promptText = applyStyle(entry.prompt, styleContent);
-  const imageNames = extractImageNames(promptText, Array.from(imageMap.keys()));
-
-  const messageContent: Array<Record<string, unknown>> = [{ type: 'text', text: promptText }];
-
-  for (const name of imageNames) {
-    const ref = imageMap.get(name);
-    if (!ref) continue;
-    if (ref.path) {
-      const base64 = await readLocalImageAsBase64(ref.path.startsWith('images/') ? path.join('public', ref.path) : ref.path);
-      if (base64) {
-        messageContent.push({ type: 'image_url', image_url: { url: base64 } });
-      }
-    } else if (ref.url) {
-      messageContent.push({ type: 'image_url', image_url: { url: ref.url } });
-    }
-  }
-
-  const payload = {
-    model: apiConfig.model,
-    messages: [
-      { role: 'system', content: 'You are a helpful assistant.' },
-      { role: 'user', content: messageContent },
-    ],
-  };
-
-  await updatePrompt(entry.number, { status: '生成中', errorMsg: '', progress: 0 });
-
-  let attempt = 0;
-  let lastError: Error | null = null;
-
-  while (attempt <= retryCount) {
-    try {
-      const response = await fetchWithTimeout(
-        apiConfig.url,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiConfig.apiKey}`,
-          },
-          body: JSON.stringify(payload),
-        },
-        600_000,
-      );
-
-      if (!response.ok) {
-        throw new Error(`接口响应状态码: ${response.status}`);
-      }
-
-      const data = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-      };
-
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) {
-        throw new Error('接口返回内容为空');
-      }
-
-      const result = parseImageFromContent(content);
-      if (!result) {
-        throw new Error('未在响应中找到图片数据');
-      }
-
-      await updatePrompt(entry.number, { status: '下载中', progress: 90 });
-      const { localPath, actualFilename } = result.base64
-        ? await saveBase64Image(result.base64, entry.number, saveDir)
-        : await downloadImage(result.url!, entry.number, saveDir);
-
-      await updatePrompt(entry.number, {
-        status: '成功',
-        localPath,
-        imageUrl: result.url,
-        actualFilename,
-        progress: 100,
-        errorMsg: '',
-      });
-      return;
-    } catch (error) {
-      lastError = error as Error;
-      attempt += 1;
-      if (attempt > retryCount) {
-        break;
-      }
-      await updatePrompt(entry.number, {
-        status: '生成中',
-        progress: Math.min(80, 20 + attempt * 10),
-        errorMsg: `正在重试 (${attempt}/${retryCount}) ...`,
-      });
-    }
-  }
-
-  await updatePrompt(entry.number, {
-    status: '失败',
-    errorMsg: lastError?.message ?? '未知错误',
-    progress: 0,
-  });
-}
-
-export async function generateImages({ mode, numbers }: GenerateImagesPayload) {
-  const data = await readAppData();
-  const prompts = data.prompts;
-
-  let targets: PromptEntry[] = [];
+function selectTargets(prompts: PromptEntry[], mode: 'new' | 'selected' | 'all', numbers?: string[]) {
   if (mode === 'new') {
-    targets = prompts.filter((item) => item.status === '等待中');
-  } else if (mode === 'selected') {
-    const selectedSet = new Set(numbers ?? []);
-    targets = prompts.filter((item) => selectedSet.has(item.number));
-  } else {
-    targets = [...prompts];
+    return prompts.filter((item) => item.status === '等待中');
   }
+  if (mode === 'selected') {
+    const selectedSet = new Set(numbers ?? []);
+    return prompts.filter((item) => selectedSet.has(item.number));
+  }
+  return [...prompts];
+}
+
+export async function prepareImageJobs(payload: GenerateImagesPayload): Promise<PrepareImageJobsResult> {
+  const data = await readAppData();
+  const prompts = data.prompts ?? [];
+  const targets = selectTargets(prompts, payload.mode, payload.numbers);
 
   if (!targets.length) {
-    return { success: false, message: '没有需要生成的提示词' };
+    return { jobs: [], targets, message: '没有需要生成的提示词' };
   }
 
-  const { config: apiConfig, diagnostics } = await resolveApiConfig(data);
-  const retryCount = data.apiSettings.retryCount ?? 0;
-  const limit = pLimit(Math.max(1, data.apiSettings.threadCount ?? 1));
-  const imageMap = collectImageMap(data.categoryLinks);
-  const styleContent = data.customStyleContent?.trim()
-    || (data.currentStyle && data.styleLibrary[data.currentStyle]?.content?.trim())
-    || '';
-  const saveDir = resolveSaveDir(data.apiSettings.savePath, path.join('public', 'generated_images'));
-
-  // Reset status if regenerate
+  const targetNumbers = new Set(targets.map((item) => item.number));
   await updateAppData((draft) => {
     draft.prompts.forEach((prompt) => {
-      if (targets.find((item) => item.number === prompt.number)) {
+      if (targetNumbers.has(prompt.number)) {
         prompt.status = '等待中';
         prompt.errorMsg = '';
         prompt.progress = 0;
@@ -440,20 +45,30 @@ export async function generateImages({ mode, numbers }: GenerateImagesPayload) {
     return draft;
   });
 
-  await Promise.all(
-    targets.map((entry) =>
-      limit(() =>
-        processPrompt({
-          entry,
-          apiConfig,
-          retryCount,
-          imageMap,
-          styleContent,
-          saveDir,
-        }),
-      ),
-    ),
-  );
+  const jobs: ImageJob[] = targets.map((entry) => ({
+    id: entry.number,
+    prompt: entry.prompt,
+    seed: entry.number,
+    meta: {
+      promptNumber: entry.number,
+      source: 'generate/images',
+    },
+  }));
 
-  return { success: true, warnings: diagnostics.length ? diagnostics : undefined };
+  return { jobs, targets };
+}
+
+export async function generateImages(payload: GenerateImagesPayload) {
+  const { jobs, message } = await prepareImageJobs(payload);
+  if (!jobs.length) {
+    return { success: false, message, results: [], failed: [] };
+  }
+
+  const { results, failed, diagnostics } = await orchestrateGenerateImages(jobs);
+  return {
+    success: failed.length === 0,
+    results,
+    failed,
+    warnings: diagnostics,
+  };
 }
