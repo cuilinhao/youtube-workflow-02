@@ -20,6 +20,10 @@
 
 # production
 /build
+/public/generated_images
+# 忽略批量出图的本地产物
+/public/generated_images/*
+!/public/generated_images/.gitkeep
 
 # misc
 .DS_Store

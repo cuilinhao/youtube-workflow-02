@@ -44,6 +44,8 @@ import pLimit from 'p-limit';
 import { ensureRemoteImageUrl } from '@/lib/r2/r2Upload';
 import { toast } from 'sonner';
 import { VideoTaskBoard } from '@/components/dashboard/video-task-board';
+import { ShotPromptEditor } from '@/components/workflow/shot-prompt-editor';
+import { VideoPromptEditor } from '@/components/workflow/video-prompt-editor';
 import {
   VideoTaskForm,
   createEmptyVideoTaskDraft,
@@ -255,6 +257,43 @@ export function VideoWorkflow() {
     }
     
     throw lastError;
+  };
+
+  const handleShotPromptsChange = (shots: ShotPrompt[]) => {
+    setShotPrompts(shots);
+    setError(null);
+    setWarning(null);
+    setCreatedTaskNumbers([]);
+    setBatchVideoStatus([]);
+
+    if (shots.length) {
+      updateStepStatus('shots', 'completed', shots);
+    } else {
+      updateStepStatus('shots', 'pending', []);
+    }
+
+    setImages([]);
+    setVideoPrompts([]);
+    updateStepStatus('images', 'pending');
+    updateStepStatus('video-prompts', 'pending');
+    updateStepStatus('video-batch', 'pending');
+    updateStepStatus('export', 'pending');
+  };
+
+  const handleVideoPromptsChange = (prompts: VideoPrompt[]) => {
+    setVideoPrompts(prompts);
+    setError(null);
+    setWarning(null);
+    setCreatedTaskNumbers([]);
+    setBatchVideoStatus([]);
+
+    if (prompts.length) {
+      updateStepStatus('video-prompts', 'completed', prompts);
+      updateStepStatus('video-batch', 'pending');
+    } else {
+      updateStepStatus('video-prompts', 'pending', []);
+      updateStepStatus('video-batch', 'pending');
+    }
   };
 
   const handleGenerateShots = async () => {
@@ -1011,104 +1050,6 @@ export function VideoWorkflow() {
     }
   };
 
-  const importFromCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      if (!text) return;
-
-      try {
-        const lines = text.split('\n').filter(line => line.trim());
-        if (lines.length < 2) {
-          setError('CSV文件格式不正确');
-          return;
-        }
-
-        const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-        const isShotsCSV = headers.includes('image_prompt') && headers.includes('shot_id');
-        const isVideoPromptsCSV = headers.includes('image_prompt') && headers.includes('shot_id') && headers.length === 2;
-
-        if (isShotsCSV) {
-          const shots: ShotPrompt[] = [];
-          for (let i = 1; i < lines.length; i++) {
-            const values = parseCSVLine(lines[i]);
-            if (values.length >= 2) {
-              shots.push({
-                shot_id: values[0],
-                image_prompt: values[1]
-              });
-            }
-          }
-          if (shots.length > 0) {
-            setShotPrompts(shots);
-            updateStepStatus('shots', 'completed', shots);
-            updateStepStatus('images', 'pending');
-            setImages([]);
-            setVideoPrompts([]);
-            setCreatedTaskNumbers([]);
-            updateStepStatus('edit', 'pending');
-            updateStepStatus('video-prompts', 'pending');
-            updateStepStatus('video-batch', 'pending');
-            updateStepStatus('export', 'pending');
-          }
-        } else if (isVideoPromptsCSV) {
-          const prompts: VideoPrompt[] = [];
-          for (let i = 1; i < lines.length; i++) {
-            const values = parseCSVLine(lines[i]);
-            if (values.length >= 2) {
-              prompts.push({
-                shot_id: values[0],
-                image_prompt: values[1]
-              });
-            }
-          }
-          if (prompts.length > 0) {
-            setVideoPrompts(prompts);
-            setCreatedTaskNumbers([]);
-            updateStepStatus('video-prompts', 'completed', prompts);
-            updateStepStatus('video-batch', 'pending');
-            updateStepStatus('export', 'pending');
-          }
-        } else {
-          setError('CSV文件格式不支持，请使用正确的分镜或视频提示词CSV格式');
-          console.error('[VideoWorkflow] CSV format not supported');
-        }
-      } catch (parseError) {
-        setError('CSV文件解析失败');
-        console.error('[VideoWorkflow] CSV parse failed', parseError);
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++; // 跳过下一个引号
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current.trim());
-    return result;
-  };
-
   const getStepIcon = (status: WorkflowStep['status']) => {
     switch (status) {
       case 'completed': return <CheckCircle className="h-5 w-5 text-green-500" />;
@@ -1146,53 +1087,6 @@ export function VideoWorkflow() {
                 </div>
               </div>
             ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* CSV导入功能 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            CSV导入/导出
-          </CardTitle>
-          <CardDescription>
-            支持从现有CSV文件导入分镜或视频提示词，或导出当前数据为CSV格式
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline"
-              onClick={() => document.getElementById('csv-import')?.click()}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              导入CSV
-            </Button>
-            <input
-              id="csv-import"
-              type="file"
-              accept=".csv"
-              onChange={importFromCSV}
-              className="hidden"
-            />
-            <Button 
-              variant="outline"
-              onClick={() => exportToCSV('shots')}
-              disabled={shotPrompts.length === 0}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              导出分镜CSV
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => exportToCSV('video-prompts')}
-              disabled={videoPrompts.length === 0}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              导出视频提示词CSV
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -1265,47 +1159,32 @@ export function VideoWorkflow() {
       </Card>
 
       {/* 步骤2: 分镜预览 */}
-      {shotPrompts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              步骤2: 分镜预览 ({shotPrompts.length} 个镜头)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {shotPrompts.map((shot, index) => (
-                <div key={shot.shot_id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="outline">{shot.shot_id}</Badge>
-                    <span className="text-sm text-gray-500">镜头 {index + 1}</span>
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap">{shot.image_prompt}</p>
-                </div>
-              ))}
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleGenerateImages}
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                  批量生成图片
-                </Button>
-                <Button 
-                  onClick={() => exportToCSV('shots')}
-                  variant="outline"
-                  disabled={shotPrompts.length === 0}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  导出CSV
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="space-y-3">
+        <ShotPromptEditor
+          value={shotPrompts}
+          onChange={handleShotPromptsChange}
+          title={`步骤2: 分镜预览 (${shotPrompts.length} 个镜头)`}
+          description="支持手动编辑或导入 CSV/JSON，亦可直接添加新分镜。"
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={handleGenerateImages}
+            disabled={isLoading || shotPrompts.length === 0}
+            className="flex-1 md:flex-none"
+          >
+            <ImageIcon className="mr-2 h-4 w-4" />
+            批量生成图片
+          </Button>
+          <Button
+            onClick={() => exportToCSV('shots')}
+            variant="outline"
+            disabled={shotPrompts.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            导出 CSV
+          </Button>
+        </div>
+      </div>
 
       {/* 步骤3: 图片网格 */}
       {images.length > 0 && (
@@ -1400,53 +1279,36 @@ export function VideoWorkflow() {
       )}
 
       {/* 步骤4: 视频提示词 */}
-      {videoPrompts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Video className="h-5 w-5" />
-              步骤4: 视频提示词 ({videoPrompts.length} 个)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {videoPrompts.map((prompt, index) => (
-                <div key={prompt.shot_id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="outline">{prompt.shot_id}</Badge>
-                    <span className="text-sm text-gray-500">镜头 {index + 1}</span>
-                  </div>
-                  <p className="text-sm">{prompt.image_prompt}</p>
-                </div>
-              ))}
-              
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  onClick={() => copyToClipboard(JSON.stringify(videoPrompts, null, 2))}
-                  variant="outline"
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  复制JSON
-                </Button>
-                <Button 
-                  onClick={exportToJSON}
-                  variant="outline"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  下载JSON
-                </Button>
-                <Button 
-                  onClick={() => exportToCSV('video-prompts')}
-                  variant="outline"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  导出CSV
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="space-y-3">
+        <VideoPromptEditor
+          value={videoPrompts}
+          onChange={handleVideoPromptsChange}
+          title={`步骤4: 视频提示词 (${videoPrompts.length} 个)`}
+          description="可手动维护或导入视频提示词，支持 CSV/JSON。"
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => copyToClipboard(JSON.stringify(videoPrompts, null, 2))}
+            variant="outline"
+            disabled={videoPrompts.length === 0}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            复制 JSON
+          </Button>
+          <Button onClick={exportToJSON} variant="outline" disabled={videoPrompts.length === 0}>
+            <Download className="mr-2 h-4 w-4" />
+            下载 JSON
+          </Button>
+          <Button
+            onClick={() => exportToCSV('video-prompts')}
+            variant="outline"
+            disabled={videoPrompts.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            导出 CSV
+          </Button>
+        </div>
+      </div>
 
       {/* 步骤5: 批量图生视频 */}
       {videoPrompts.length > 0 && (

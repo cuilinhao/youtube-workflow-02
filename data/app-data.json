@@ -3,8 +3,8 @@
     "threadCount": 5,
     "retryCount": 3,
     "savePath": "public/generated_images",
-    "currentKeyName": "yunwu",
-    "apiPlatform": "云雾"
+    "currentKeyName": "kie",
+    "apiPlatform": "KIE.AI"
   },
   "styleLibrary": {
     "超写实风格": {
@@ -54,7 +54,7 @@
       "apiKey": "sk-VnAoC18TCbaltpy8L9AODFlo30Us27cZvF9Xo2tmUtDzDueB",
       "platform": "云雾",
       "createdTime": "2025-09-27T14:12:04.825Z",
-      "lastUsed": "2025-10-17T08:14:49.570Z"
+      "lastUsed": "2025-10-17T12:22:54.766Z"
     }
   },
   "prompts": [
@@ -175,7 +175,7 @@
       "prompt": "主体：一只橘色的猫咪tom，圆润可爱的体型\n表情：满足愉悦的表情，眼睛微眯\n动作：坐在餐桌前，正低头享用早餐，用爪子捧着碗\n环境：温馨的家庭餐厅，木质餐桌上摆放着猫粮碗和牛奶\n时间：清晨，阳光透过窗户洒进室内\n天气：晴朗的早晨\n视角：侧面45度角拍摄\n景别：中景，突出猫咪用餐的场景",
       "status": "成功",
       "createdAt": "2025-10-17T01:17:37.712Z",
-      "updatedAt": "2025-10-17T08:15:36.155Z",
+      "updatedAt": "2025-10-17T12:23:15.010Z",
       "errorMsg": "",
       "progress": 100,
       "localPath": "generated_images/shot_001.png",
@@ -183,10 +183,10 @@
     },
     {
       "number": "shot_002",
-      "prompt": "主体：橘猫tom，身材圆润，橘黄色毛发\n表情：精神抖擞，眼神专注向前\n动作：直立行走，背着一个小书包，迈着轻快的步伐\n环境：干净整洁的街道，两旁是住宅楼和商店，人行道上有路灯\n时间：早上八点左右\n天气：晴朗，阳光明媚\n视角：侧面跟拍\n景别：全景",
+      "prompt": "主体：橘猫tom，身材圆润，橘黄色毛发\n表情：精神饱满，眼神专注向前\n动作：直立行走，背着一个小书包，迈着轻快的步伐\n环境：干净整洁的街道，两旁是住宅与商店，人行道上有路灯\n时间：早上八点左右\n天气：晴朗，阳光明媚\n视角：侧面圆拍\n景别：全景",
       "status": "成功",
       "createdAt": "2025-10-17T01:17:37.712Z",
-      "updatedAt": "2025-10-17T08:15:02.751Z",
+      "updatedAt": "2025-10-17T12:23:10.243Z",
       "errorMsg": "",
       "progress": 100,
       "localPath": "generated_images/shot_002.png",
@@ -195,13 +195,24 @@
     {
       "number": "shot_003",
       "prompt": "主体：橘猫tom，坐在课桌前\n表情：认真专注的表情，目光看向黑板\n动作：端正坐姿，前爪放在课桌上，做笔记状\n环境：明亮的教室内，黑板上有板书，周围有其他课桌椅\n时间：上午上课时间\n天气：室内场景，窗外阳光充足\n视角：侧前方斜角度\n景别：中景，突出橘猫认真听课的状态",
-      "status": "成功",
+      "status": "失败",
       "createdAt": "2025-10-17T01:17:37.712Z",
-      "updatedAt": "2025-10-17T08:15:30.596Z",
-      "errorMsg": "",
-      "progress": 100,
+      "updatedAt": "2025-10-17T12:23:01.983Z",
+      "errorMsg": "接口响应状态码: 403",
+      "progress": 0,
       "localPath": "generated_images/shot_003.png",
       "actualFilename": "shot_003.png"
+    },
+    {
+      "number": "shot_004",
+      "prompt": "一个性感美女",
+      "status": "成功",
+      "createdAt": "2025-10-17T12:22:52.520Z",
+      "updatedAt": "2025-10-17T12:23:10.113Z",
+      "errorMsg": "",
+      "progress": 100,
+      "localPath": "generated_images/shot_004.png",
+      "actualFilename": "shot_004.png"
     }
   ],
   "promptNumbers": {
@@ -223,7 +234,8 @@
     "[主体]\n角色：女医生rumi，男人juni\n表情：男人juni的表情是惊恐，女医生rumi的表情是兴奋\n动作：男人juni双手抱头，惊恐地在走廊里向前跑。女医生rumi在他身后紧追不舍，举着电锯。\n[环境]\n一条现代化的医院走廊。\n[时间]\n白天\n[天气]\n无\n[视角]\n平视\n[景别]\n全景": "15",
     "主体：一只橘色的猫咪tom，圆润可爱的体型\n表情：满足愉悦的表情，眼睛微眯\n动作：坐在餐桌前，正低头享用早餐，用爪子捧着碗\n环境：温馨的家庭餐厅，木质餐桌上摆放着猫粮碗和牛奶\n时间：清晨，阳光透过窗户洒进室内\n天气：晴朗的早晨\n视角：侧面45度角拍摄\n景别：中景，突出猫咪用餐的场景": "shot_001",
     "主体：橘猫tom，坐在课桌前\n表情：认真专注的表情，目光看向黑板\n动作：端正坐姿，前爪放在课桌上，做笔记状\n环境：明亮的教室内，黑板上有板书，周围有其他课桌椅\n时间：上午上课时间\n天气：室内场景，窗外阳光充足\n视角：侧前方斜角度\n景别：中景，突出橘猫认真听课的状态": "shot_003",
-    "主体：橘猫tom，身材圆润，橘黄色毛发\n表情：精神抖擞，眼神专注向前\n动作：直立行走，背着一个小书包，迈着轻快的步伐\n环境：干净整洁的街道，两旁是住宅楼和商店，人行道上有路灯\n时间：早上八点左右\n天气：晴朗，阳光明媚\n视角：侧面跟拍\n景别：全景": "shot_002"
+    "一个性感美女": "shot_004",
+    "主体：橘猫tom，身材圆润，橘黄色毛发\n表情：精神饱满，眼神专注向前\n动作：直立行走，背着一个小书包，迈着轻快的步伐\n环境：干净整洁的街道，两旁是住宅与商店，人行道上有路灯\n时间：早上八点左右\n天气：晴朗，阳光明媚\n视角：侧面圆拍\n景别：全景": "shot_002"
   },
   "videoSettings": {
     "apiKey": "",
@@ -234,176 +246,7 @@
     "enableFallback": false,
     "enableTranslation": true
   },
-  "videoTasks": [
-    {
-      "number": "1",
-      "prompt": "橘猫tom坐在餐桌前享用早餐，神态放松惬意，镜头温馨平稳地展现清晨用餐时光",
-      "imageUrls": [
-        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/videos/20251017/shot_001.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T103248Z&X-Amz-Expires=300&X-Amz-Signature=b821cfdd1e3df20b17f8b47e4d707d0002ce98a288f9f59b75af02f50f1afb11&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T10:32:54.822Z",
-      "workflow": "A",
-      "attempts": 3,
-      "maxAttempts": 3,
-      "errorMsg": "read ECONNRESET",
-      "fingerprint": "881b0298a1ecce02cc4ce7f5e71f3c95916f09fbec94f31c5171560887a0899a",
-      "updatedAt": "2025-10-17T10:32:57.133Z",
-      "finishedAt": "2025-10-17T10:32:57.133Z",
-      "startedAt": "2025-10-17T10:32:56.520Z"
-    },
-    {
-      "number": "2",
-      "prompt": "橘猫tom背着书包沿街道行走，步伐轻快充满朝气，镜头跟随展现上学路上的活力氛围",
-      "imageUrls": [
-        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/videos/20251017/shot_002.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T103250Z&X-Amz-Expires=300&X-Amz-Signature=dc825f6b80ce7310a501504f4b634e906ec9f0dde73da949dd5f5a4e40468403&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "生成中",
-      "progress": 0,
-      "createdAt": "2025-10-17T10:32:55.077Z",
-      "workflow": "A",
-      "attempts": 3,
-      "maxAttempts": 3,
-      "fingerprint": "fe7408f61a8d77c055052e02eb73cfcd224af83193ae0163f04e57c672ab94f8",
-      "updatedAt": "2025-10-17T10:32:57.058Z",
-      "errorMsg": "read ECONNRESET",
-      "finishedAt": "2025-10-17T10:32:56.737Z",
-      "startedAt": "2025-10-17T10:32:57.061Z"
-    },
-    {
-      "number": "3",
-      "prompt": "橘猫tom坐在课桌前专注听课，表情认真投入，镜头平稳呈现安静的课堂学习场景",
-      "imageUrls": [
-        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/videos/20251017/shot_003.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T103248Z&X-Amz-Expires=300&X-Amz-Signature=7149058d32a9026c8d212853d50fe67e3f4c5a7422bfacdf6857c02d6a29fd74&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T10:32:55.342Z",
-      "workflow": "A",
-      "attempts": 3,
-      "maxAttempts": 3,
-      "errorMsg": "read ECONNRESET",
-      "fingerprint": "197c83e3ccb2141ba7dfbda3b5d3c22c0f3b8f9f3ed6a727bf91ea02a31b0332",
-      "updatedAt": "2025-10-17T10:32:57.191Z",
-      "finishedAt": "2025-10-17T10:32:57.250Z",
-      "startedAt": "2025-10-17T10:32:56.550Z"
-    },
-    {
-      "number": "4",
-      "prompt": "唱歌",
-      "imageUrls": [
-        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/video-references/1760698833193/bob.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T110037Z&X-Amz-Expires=300&X-Amz-Signature=2fd3e24af0cfcf84b1c30d8cc8b76fe4e5705ac777ef374318755915188f0034&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T11:01:26.213Z",
-      "workflow": "A",
-      "attempts": 3,
-      "maxAttempts": 3,
-      "errorMsg": "read ECONNRESET",
-      "fingerprint": "b5307d651cc15ef4247b2c5862e2bb87e0ad36179e27f6a03de29d4f15288408",
-      "updatedAt": "2025-10-17T11:01:37.265Z",
-      "finishedAt": "2025-10-17T11:01:37.267Z",
-      "startedAt": "2025-10-17T11:01:36.622Z"
-    },
-    {
-      "number": "5",
-      "prompt": "唱歌",
-      "imageUrls": [
-        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/video-references/1760698833193/rumi.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T110043Z&X-Amz-Expires=300&X-Amz-Signature=559fbfadd94b19eac5610c52449b051cb788299bf196cd8efbc247275e2695d8&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T11:01:26.492Z",
-      "workflow": "A",
-      "attempts": 3,
-      "maxAttempts": 3,
-      "errorMsg": "read ECONNRESET",
-      "fingerprint": "4b88fe111a0e9305b33f56a66ef08296fc75d3fda2586a887a1ef689b32c8726",
-      "updatedAt": "2025-10-17T11:01:37.261Z",
-      "finishedAt": "2025-10-17T11:01:37.262Z",
-      "startedAt": "2025-10-17T11:01:36.651Z"
-    },
-    {
-      "number": "6",
-      "prompt": "唱歌",
-      "imageUrls": [
-        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/video-references/1760698833193/tom.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T110044Z&X-Amz-Expires=300&X-Amz-Signature=b759b31d8c8786dacb205d25bdc235a8d5332df4cec6b64e812c09c6ecac7808&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T11:01:26.736Z",
-      "workflow": "A",
-      "attempts": 3,
-      "maxAttempts": 3,
-      "errorMsg": "read ECONNRESET",
-      "fingerprint": "10fb334c73dd004163989ff3c45d5824de58415678c71d6bfb8d5b2d59d0936c",
-      "updatedAt": "2025-10-17T11:01:37.380Z",
-      "finishedAt": "2025-10-17T11:01:37.381Z",
-      "startedAt": "2025-10-17T11:01:37.191Z"
-    },
-    {
-      "number": "7",
-      "prompt": "唱歌",
-      "imageUrls": [
-        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/video-references/1760698833193/jinu.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T110046Z&X-Amz-Expires=300&X-Amz-Signature=fa0e6129e797c5f64c8d1878fb6dc23d100562a18d53170bd68b12fe1e309dab&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T11:01:26.973Z",
-      "workflow": "A",
-      "attempts": 3,
-      "maxAttempts": 3,
-      "fingerprint": "2f95b336990687df311150deeac7615cb03eca171eaaaebad3eab75d1f7899fb",
-      "updatedAt": "2025-10-17T11:01:37.858Z",
-      "startedAt": "2025-10-17T11:01:36.224Z",
-      "errorMsg": "read ECONNRESET",
-      "finishedAt": "2025-10-17T11:01:37.862Z"
-    }
-  ],
+  "videoTasks": [],
   "generatedImages": {},
   "generatedVideos": []
 }
