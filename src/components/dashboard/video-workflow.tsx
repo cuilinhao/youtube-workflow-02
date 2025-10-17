@@ -7,13 +7,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Play, 
-  Upload, 
-  Download, 
-  Copy, 
-  Trash2, 
-  RotateCcw, 
+import { Progress } from '@/components/ui/progress';
+import {
+  Play,
+  Upload,
+  Download,
+  Copy,
+  Trash2,
+  RotateCcw,
   RefreshCw,
   FileText,
   Image as ImageIcon,
@@ -21,7 +22,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { 
   ShotPrompt, 
@@ -36,6 +38,9 @@ import {
 } from '@/lib/types';
 import { api } from '@/lib/api';
 import defaultWorkflow from '@/data/default-video-workflow.json';
+import pLimit from 'p-limit';
+import { ensureRemoteImageUrl } from '@/lib/r2/r2Upload';
+import { toast } from 'sonner';
 
 type DefaultWorkflow = {
   script: string;
@@ -59,12 +64,26 @@ const DEFAULT_WORKFLOW: DefaultWorkflow = {
   videoPrompts: (defaultWorkflow.videoPrompts as VideoPrompt[] | undefined) ?? [],
 };
 
+const r2UrlCache = new Map<string, string>();
+
 interface WorkflowStep {
   id: string;
   title: string;
   description: string;
   status: 'pending' | 'in-progress' | 'completed' | 'error';
   data?: unknown;
+}
+
+interface ImageUploadStatus {
+  shot_id: string;
+  imageUrl: string;
+  prompt: string;
+  status: 'pending' | 'uploading' | 'uploaded' | 'generating' | 'completed' | 'error';
+  progress: number;
+  r2Url?: string;
+  videoTaskNumber?: string;
+  videoUrl?: string;
+  error?: string;
 }
 
 export function VideoWorkflow() {
@@ -89,7 +108,10 @@ export function VideoWorkflow() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [maxRetries] = useState(3);
-  
+  const [batchVideoStatus, setBatchVideoStatus] = useState<ImageUploadStatus[]>([]);
+  const [isUploadingToR2, setIsUploadingToR2] = useState(false);
+  const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateStepStatus = useCallback((stepId: string, status: WorkflowStep['status'], data?: unknown) => {
@@ -100,27 +122,6 @@ export function VideoWorkflow() {
           : step
       )
     );
-  }, []);
-
-  const resolveImageUrl = useCallback((input: string) => {
-    if (!input) {
-      return input;
-    }
-    if (/^https?:\/\//i.test(input)) {
-      return input;
-    }
-    if (typeof window === 'undefined') {
-      return input;
-    }
-    try {
-      return new URL(input, window.location.origin).toString();
-    } catch (error) {
-      console.warn('[VideoWorkflow] Failed to resolve absolute image url', {
-        input,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return input;
-    }
   }, []);
 
   const applyReorderResult = useCallback((data: ReorderResponse) => {
@@ -565,21 +566,21 @@ export function VideoWorkflow() {
     }
   };
 
-  const handleBatchVideoGeneration = async () => {
-    console.info('[VideoWorkflow] Start batch video generation', {
-      promptCount: videoPrompts.length,
+  const handleBatchUploadToR2 = async () => {
+    console.info('[VideoWorkflow] Start batch upload to R2', {
       imageCount: images.length,
+      promptCount: videoPrompts.length,
     });
-
-    if (videoPrompts.length === 0) {
-      setError('请先生成视频提示词');
-      console.error('[VideoWorkflow] Cannot batch generate videos without prompts');
-      return;
-    }
 
     if (images.length === 0) {
       setError('请先准备对应的参考图片');
-      console.error('[VideoWorkflow] Cannot batch generate videos without images');
+      toast.error('请先准备对应的参考图片');
+      return;
+    }
+
+    if (videoPrompts.length === 0) {
+      setError('请先生成视频提示词');
+      toast.error('请先生成视频提示词');
       return;
     }
 
@@ -589,14 +590,112 @@ export function VideoWorkflow() {
     if (missingShots.length > 0) {
       const missingList = missingShots.map((item) => item.shot_id).join('、');
       setError(`以下镜头缺少对应图片：${missingList}`);
-      updateStepStatus('video-batch', 'error');
-      console.error('[VideoWorkflow] Missing images for video prompts', { missingShots });
+      toast.error(`以下镜头缺少对应图片：${missingList}`);
       return;
     }
 
-    setIsLoading(true);
+    setIsUploadingToR2(true);
     setError(null);
-    setVideoBatchInfo(null);
+
+    // 初始化状态
+    const initialStatus: ImageUploadStatus[] = videoPrompts.map((prompt) => {
+      const image = imageMap.get(prompt.shot_id);
+      return {
+        shot_id: prompt.shot_id,
+        imageUrl: image?.url || '',
+        prompt: prompt.image_prompt,
+        status: 'pending',
+        progress: 0,
+      };
+    });
+    setBatchVideoStatus(initialStatus);
+
+    try {
+      const uploadLimit = pLimit(3);
+      const batchPrefix = `videos/${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+
+      const uploadTasks = initialStatus.map((item) =>
+        uploadLimit(async () => {
+          // 更新状态为上传中
+          setBatchVideoStatus((prev) =>
+            prev.map((s) =>
+              s.shot_id === item.shot_id
+                ? { ...s, status: 'uploading', progress: 0 }
+                : s
+            )
+          );
+
+          try {
+            const remoteUrl = await ensureRemoteImageUrl({
+              inputUrl: item.imageUrl,
+              filenameHint: item.imageUrl.split('/').pop() || `${item.shot_id}.png`,
+              prefix: batchPrefix,
+              onProgress: (progress) => {
+                setBatchVideoStatus((prev) =>
+                  prev.map((s) =>
+                    s.shot_id === item.shot_id
+                      ? { ...s, progress }
+                      : s
+                  )
+                );
+              },
+            });
+
+            // 更新状态为上传完成
+            setBatchVideoStatus((prev) =>
+              prev.map((s) =>
+                s.shot_id === item.shot_id
+                  ? { ...s, status: 'uploaded', progress: 100, r2Url: remoteUrl }
+                  : s
+              )
+            );
+
+            return { shot_id: item.shot_id, remoteUrl };
+          } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : '上传失败';
+            setBatchVideoStatus((prev) =>
+              prev.map((s) =>
+                s.shot_id === item.shot_id
+                  ? { ...s, status: 'error', error: errorMsg }
+                  : s
+              )
+            );
+            throw error;
+          }
+        })
+      );
+
+      await Promise.all(uploadTasks);
+      toast.success('所有图片已上传到R2');
+      console.info('[VideoWorkflow] All images uploaded to R2');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '批量上传图片失败';
+      setError(message);
+      toast.error(message);
+      console.error('[VideoWorkflow] Batch upload to R2 failed', err);
+    } finally {
+      setIsUploadingToR2(false);
+    }
+  };
+
+  const handleBatchGenerateVideos = async () => {
+    console.info('[VideoWorkflow] Start batch generate videos', {
+      statusCount: batchVideoStatus.length,
+    });
+
+    // 检查是否所有图片都已上传
+    const allUploaded = batchVideoStatus.every(
+      (item) => item.status === 'uploaded' && item.r2Url
+    );
+
+    if (!allUploaded) {
+      setError('请先完成图片上传到R2');
+      toast.error('请先完成图片上传到R2');
+      return;
+    }
+
+    setIsGeneratingVideos(true);
+    setError(null);
     updateStepStatus('video-batch', 'in-progress');
 
     try {
@@ -614,42 +713,76 @@ export function VideoWorkflow() {
 
       const createdNumbers: string[] = [];
 
-      for (const prompt of videoPrompts) {
-        const image = imageMap.get(prompt.shot_id)!;
-        const absoluteUrl = resolveImageUrl(image.url);
-        console.info('[VideoWorkflow] Creating video task', {
-          shotId: prompt.shot_id,
-          imageUrl: absoluteUrl,
-        });
-        const result = await retryWithBackoff(
-          () =>
-            api.addVideoTask({
-              prompt: prompt.image_prompt,
-              imageUrls: [absoluteUrl],
-              aspectRatio,
-              watermark,
-              callbackUrl,
-              enableFallback,
-              enableTranslation,
-            }),
-          `添加视频任务 ${prompt.shot_id}`,
-          maxRetries
+      // 为每个图片创建视频任务
+      for (const item of batchVideoStatus) {
+        if (!item.r2Url) continue;
+
+        // 更新状态为生成中
+        setBatchVideoStatus((prev) =>
+          prev.map((s) =>
+            s.shot_id === item.shot_id
+              ? { ...s, status: 'generating' }
+              : s
+          )
         );
 
-        if (!result.success) {
-          throw new Error(`添加视频任务失败：${prompt.shot_id}`);
-        }
+        try {
+          console.info('[VideoWorkflow] Creating video task', {
+            shotId: item.shot_id,
+            imageUrl: item.r2Url,
+          });
 
-        createdNumbers.push(result.task.number);
+          const result = await retryWithBackoff(
+            () =>
+              api.addVideoTask({
+                prompt: item.prompt,
+                imageUrls: [item.r2Url!],
+                aspectRatio,
+                watermark,
+                callbackUrl,
+                enableFallback,
+                enableTranslation,
+              }),
+            `添加视频任务 ${item.shot_id}`,
+            maxRetries
+          );
+
+          if (!result.success) {
+            throw new Error(`添加视频任务失败：${item.shot_id}`);
+          }
+
+          createdNumbers.push(result.task.number);
+
+          // 更新状态
+          setBatchVideoStatus((prev) =>
+            prev.map((s) =>
+              s.shot_id === item.shot_id
+                ? { ...s, videoTaskNumber: result.task.number }
+                : s
+            )
+          );
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : '创建任务失败';
+          setBatchVideoStatus((prev) =>
+            prev.map((s) =>
+              s.shot_id === item.shot_id
+                ? { ...s, status: 'error', error: errorMsg }
+                : s
+            )
+          );
+          throw error;
+        }
       }
 
       if (!createdNumbers.length) {
         throw new Error('没有可提交的视频任务');
       }
 
+      // 启动批量生成
       console.info('[VideoWorkflow] Video tasks created, starting generation', {
         numbers: createdNumbers,
       });
+
       const startResponse = await retryWithBackoff(
         () => api.startVideoGeneration(createdNumbers),
         '批量出视频',
@@ -660,10 +793,20 @@ export function VideoWorkflow() {
         throw new Error(startResponse.message ?? '批量出视频任务提交失败');
       }
 
+      // 更新所有状态为已完成
+      setBatchVideoStatus((prev) =>
+        prev.map((s) =>
+          s.status === 'generating'
+            ? { ...s, status: 'completed' }
+            : s
+        )
+      );
+
       const summary = `已创建并启动 ${createdNumbers.length} 个视频任务`;
       setVideoBatchInfo({ numbers: createdNumbers, message: summary });
       updateStepStatus('video-batch', 'completed', createdNumbers);
       updateStepStatus('export', 'pending');
+      toast.success(summary);
       console.info('[VideoWorkflow] Batch video generation started', {
         numbers: createdNumbers,
       });
@@ -672,9 +815,10 @@ export function VideoWorkflow() {
       setError(message);
       setVideoBatchInfo(null);
       updateStepStatus('video-batch', 'error');
+      toast.error(message);
       console.error('[VideoWorkflow] Batch video generation failed', err);
     } finally {
-      setIsLoading(false);
+      setIsGeneratingVideos(false);
     }
   };
 
@@ -1217,7 +1361,7 @@ export function VideoWorkflow() {
               步骤5: 批量图生视频
             </CardTitle>
             <CardDescription>
-              一键将提示词与参考图同步到批量图生视频模块，并立即启动生成任务
+              先上传图片到R2，再批量生成视频
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1249,6 +1393,123 @@ export function VideoWorkflow() {
               </Badge>
             </div>
 
+            {/* 操作按钮 */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={handleBatchUploadToR2}
+                disabled={isUploadingToR2 || isGeneratingVideos || isLoading}
+                className="flex-1 md:flex-none"
+              >
+                {isUploadingToR2 ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                批量上传图片到R2
+              </Button>
+              <Button
+                onClick={handleBatchGenerateVideos}
+                disabled={
+                  isUploadingToR2 ||
+                  isGeneratingVideos ||
+                  isLoading ||
+                  batchVideoStatus.length === 0 ||
+                  !batchVideoStatus.every((item) => item.status === 'uploaded')
+                }
+                className="flex-1 md:flex-none"
+              >
+                {isGeneratingVideos ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Video className="mr-2 h-4 w-4" />
+                )}
+                批量生成视频
+              </Button>
+            </div>
+
+            {/* 批量视频状态展示 */}
+            {batchVideoStatus.length > 0 && (
+              <div className="space-y-3">
+                <div className="text-sm font-medium">任务进度</div>
+                <div className="space-y-3 max-h-[400px] overflow-y-auto border rounded-lg p-4 bg-gray-50">
+                  {batchVideoStatus.map((item) => (
+                    <div key={item.shot_id} className="bg-white rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{item.shot_id}</Badge>
+                          <Badge
+                            variant={
+                              item.status === 'uploaded' || item.status === 'completed'
+                                ? 'default'
+                                : item.status === 'error'
+                                  ? 'destructive'
+                                  : 'secondary'
+                            }
+                          >
+                            {item.status === 'pending' && '等待中'}
+                            {item.status === 'uploading' && '上传中'}
+                            {item.status === 'uploaded' && '已上传'}
+                            {item.status === 'generating' && '生成中'}
+                            {item.status === 'completed' && '已完成'}
+                            {item.status === 'error' && '失败'}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* 图片预览 */}
+                      {item.imageUrl && (
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-24 h-36 bg-gray-100 rounded overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.imageUrl}
+                              alt={item.shot_id}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <div className="text-xs text-gray-500">提示词</div>
+                            <div className="text-sm">{item.prompt}</div>
+                            {item.videoTaskNumber && (
+                              <div className="text-xs text-gray-500">
+                                任务编号: #{item.videoTaskNumber}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 上传进度 */}
+                      {(item.status === 'uploading' || item.status === 'pending') && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>上传进度</span>
+                            <span>{item.progress}%</span>
+                          </div>
+                          <Progress value={item.progress} className="h-2" />
+                        </div>
+                      )}
+
+                      {/* 错误信息 */}
+                      {item.error && (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>{item.error}</AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* R2 URL */}
+                      {item.r2Url && (
+                        <div className="text-xs text-gray-500 truncate" title={item.r2Url}>
+                          R2 URL: {item.r2Url}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {videoBatchInfo && (
               <Alert>
                 <AlertDescription className="space-y-2">
@@ -1266,23 +1527,6 @@ export function VideoWorkflow() {
                 </AlertDescription>
               </Alert>
             )}
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={handleBatchVideoGeneration}
-                disabled={isLoading}
-                className="flex-1 md:flex-none"
-              >
-                <Video className="mr-2 h-4 w-4" />
-                批量出视频
-              </Button>
-              <Button variant="outline" asChild>
-                <a href="/video/create" target="_blank" rel="noopener noreferrer">
-                  <Play className="mr-2 h-4 w-4" />
-                  打开批量图生视频
-                </a>
-              </Button>
-            </div>
           </CardContent>
         </Card>
       )}
