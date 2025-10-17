@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Play,
   Upload,
@@ -24,7 +24,8 @@ import {
   XCircle,
   AlertCircle,
   AlertTriangle,
-  Loader2
+  Loader2,
+  PlusCircle
 } from 'lucide-react';
 import { 
   ShotPrompt, 
@@ -43,6 +44,11 @@ import pLimit from 'p-limit';
 import { ensureRemoteImageUrl } from '@/lib/r2/r2Upload';
 import { toast } from 'sonner';
 import { VideoTaskBoard } from '@/components/dashboard/video-task-board';
+import {
+  VideoTaskForm,
+  createEmptyVideoTaskDraft,
+  type VideoTaskFormSubmitPayload,
+} from '@/components/dashboard/video-task-form';
 
 type DefaultWorkflow = {
   script: string;
@@ -126,8 +132,27 @@ export function VideoWorkflow() {
   const [batchVideoStatus, setBatchVideoStatus] = useState<ImageUploadStatus[]>([]);
   const [isUploadingToR2, setIsUploadingToR2] = useState(false);
   const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [isAddingVideoTasks, setIsAddingVideoTasks] = useState(false);
+  const [taskFormResetKey, setTaskFormResetKey] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { data: workflowSettings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: api.getSettings,
+  });
+
+  const taskFormInitialValues = useMemo(
+    () =>
+      createEmptyVideoTaskDraft({
+        aspectRatio: workflowSettings?.videoSettings.defaultAspectRatio,
+        watermark: workflowSettings?.videoSettings.defaultWatermark,
+        callbackUrl: workflowSettings?.videoSettings.defaultCallback,
+        enableFallback: workflowSettings?.videoSettings.enableFallback,
+        enableTranslation: workflowSettings?.videoSettings.enableTranslation,
+      }),
+    [workflowSettings],
+  );
 
   const updateStepStatus = useCallback((stepId: string, status: WorkflowStep['status'], data?: unknown) => {
     setSteps(prev =>
@@ -578,6 +603,54 @@ export function VideoWorkflow() {
       console.error('[VideoWorkflow] Video prompt generation failed', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAddVideoTasksFromForm = async (payload: VideoTaskFormSubmitPayload) => {
+    if (!payload.rows.length) {
+      toast.error('请至少添加一个视频任务');
+      return;
+    }
+
+    setIsAddingVideoTasks(true);
+    try {
+      const createdNumbers: string[] = [];
+      for (let index = 0; index < payload.rows.length; index += 1) {
+        const row = payload.rows[index];
+        console.info('[VideoWorkflow] 添加视频任务', { index: index + 1, row });
+        const result = await api.addVideoTask({
+          prompt: row.prompt,
+          imageUrls: [row.imageUrl],
+          aspectRatio: payload.aspectRatio,
+          watermark: payload.watermark,
+          callbackUrl: payload.callbackUrl,
+          seeds: payload.seeds,
+          enableFallback: payload.enableFallback,
+          enableTranslation: payload.enableTranslation,
+        });
+        if (result.success) {
+          createdNumbers.push(result.task.number);
+        }
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['video-tasks'] });
+      await queryClient.refetchQueries({ queryKey: ['video-tasks'], type: 'active' });
+
+      if (createdNumbers.length) {
+        setCreatedTaskNumbers(createdNumbers);
+        toast.success(`已添加 ${createdNumbers.length} 个视频任务`);
+      } else {
+        toast.info('没有任务被添加');
+      }
+
+      setShowTaskForm(false);
+      setTaskFormResetKey((prev) => prev + 1);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '添加视频任务失败';
+      toast.error(message);
+      console.error('[VideoWorkflow] 添加视频任务失败', err);
+    } finally {
+      setIsAddingVideoTasks(false);
     }
   };
 
@@ -1448,7 +1521,32 @@ export function VideoWorkflow() {
                 )}
                 批量生成视频
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowTaskForm((prev) => !prev)}
+                disabled={isAddingVideoTasks}
+                className="flex-1 md:flex-none"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                {showTaskForm ? '收起任务面板' : '添加图生视频任务'}
+              </Button>
             </div>
+
+            {showTaskForm && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <VideoTaskForm
+                  key={taskFormResetKey}
+                  mode="create"
+                  initialValues={taskFormInitialValues}
+                  onSubmit={handleAddVideoTasksFromForm}
+                  onCancel={() => setShowTaskForm(false)}
+                  isSubmitting={isAddingVideoTasks}
+                  disableUpload={isAddingVideoTasks}
+                  submitLabel={isAddingVideoTasks ? '提交中...' : '添加任务'}
+                  cancelLabel="取消"
+                />
+              </div>
+            )}
 
             {/* 批量视频状态展示 */}
             {batchVideoStatus.length > 0 && (
@@ -1558,7 +1656,7 @@ export function VideoWorkflow() {
               <VideoTaskBoard
                 variant="embedded"
                 showCreateButton={false}
-                showGenerateButton={false}
+                showGenerateButton
                 highlightNumbers={createdTaskNumbers}
               />
             </div>
