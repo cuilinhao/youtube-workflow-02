@@ -35,6 +35,14 @@ export interface VideoTask {
   errorMsg?: string;
   createdAt: string;
   updatedAt?: string;
+  workflow?: 'A' | 'B';
+  providerRequestId?: string;
+  fingerprint?: string;
+  attempts?: number;
+  maxAttempts?: number;
+  actualFilename?: string;
+  startedAt?: string;
+  finishedAt?: string;
 }
 
 export interface StyleEntry {

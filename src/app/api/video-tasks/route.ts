@@ -55,6 +55,9 @@ export async function POST(request: Request) {
     status: '等待中',
     progress: 0,
     createdAt: now,
+    workflow: 'A',
+    attempts: 0,
+    maxAttempts: data.apiSettings.retryCount ?? 3,
   };
 
   data.videoTasks.push(entry);

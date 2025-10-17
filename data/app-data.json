@@ -47,14 +47,14 @@
       "apiKey": "a0d601be40ab985e269fa28916b1d724",
       "platform": "KIE.AI",
       "createdTime": "2025-09-27T13:21:18.598Z",
-      "lastUsed": "从未使用"
+      "lastUsed": "2025-10-17T08:16:00.554Z"
     },
     "yunwu": {
       "name": "yunwu",
       "apiKey": "sk-VnAoC18TCbaltpy8L9AODFlo30Us27cZvF9Xo2tmUtDzDueB",
       "platform": "云雾",
       "createdTime": "2025-09-27T14:12:04.825Z",
-      "lastUsed": "2025-10-17T01:25:40.852Z"
+      "lastUsed": "2025-10-17T08:14:49.570Z"
     }
   },
   "prompts": [
@@ -172,10 +172,10 @@
     },
     {
       "number": "shot_001",
-      "prompt": "主体：一只橘色的猫咪tom，毛发蓬松柔软\n表情：满足愉悦的表情，眼睛微眯\n动作：坐在餐桌前，用爪子捧着碗，正在低头吃早饭\n环境：温馨的家庭厨房，餐桌上摆放着牛奶和猫粮\n时间：清晨，窗外阳光透进\n天气：晴朗的早晨\n视角：平视角度\n景别：中景",
+      "prompt": "主体：一只橘色的猫咪tom，圆润可爱的体型\n表情：满足愉悦的表情，眼睛微眯\n动作：坐在餐桌前，正低头享用早餐，用爪子捧着碗\n环境：温馨的家庭餐厅，木质餐桌上摆放着猫粮碗和牛奶\n时间：清晨，阳光透过窗户洒进室内\n天气：晴朗的早晨\n视角：侧面45度角拍摄\n景别：中景，突出猫咪用餐的场景",
       "status": "成功",
       "createdAt": "2025-10-17T01:17:37.712Z",
-      "updatedAt": "2025-10-17T01:25:53.358Z",
+      "updatedAt": "2025-10-17T08:15:36.155Z",
       "errorMsg": "",
       "progress": 100,
       "localPath": "generated_images/shot_001.png",
@@ -183,10 +183,10 @@
     },
     {
       "number": "shot_002",
-      "prompt": "主体：橘猫tom，身穿小学生校服\n表情：精神饱满，充满活力的样子\n动作：背着蓝色小书包，迈着轻快的步伐走在人行道上\n环境：安静的街道，两旁是住宅楼和绿树\n时间：早上八点左右\n天气：阳光明媚，天空湛蓝\n视角：侧面跟拍视角\n景别：全景",
+      "prompt": "主体：橘猫tom，身材圆润，橘黄色毛发\n表情：精神抖擞，眼神专注向前\n动作：直立行走，背着一个小书包，迈着轻快的步伐\n环境：干净整洁的街道，两旁是住宅楼和商店，人行道上有路灯\n时间：早上八点左右\n天气：晴朗，阳光明媚\n视角：侧面跟拍\n景别：全景",
       "status": "成功",
       "createdAt": "2025-10-17T01:17:37.712Z",
-      "updatedAt": "2025-10-17T01:26:07.257Z",
+      "updatedAt": "2025-10-17T08:15:02.751Z",
       "errorMsg": "",
       "progress": 100,
       "localPath": "generated_images/shot_002.png",
@@ -194,10 +194,10 @@
     },
     {
       "number": "shot_003",
-      "prompt": "主体：橘猫tom，坐在课桌前，书包放在一旁\n表情动作：认真听讲，双眼注视前方黑板，前爪搭在课桌上，姿态端正\n环境：明亮的教室内部，整齐排列的课桌椅，黑板上有板书，墙上有教学挂图\n时间天气：白天，室内光线充足，窗外阳光透进\n视角景别：正面中近景，平视角度，突出tom专注上课的状态",
+      "prompt": "主体：橘猫tom，坐在课桌前\n表情：认真专注的表情，目光看向黑板\n动作：端正坐姿，前爪放在课桌上，做笔记状\n环境：明亮的教室内，黑板上有板书，周围有其他课桌椅\n时间：上午上课时间\n天气：室内场景，窗外阳光充足\n视角：侧前方斜角度\n景别：中景，突出橘猫认真听课的状态",
       "status": "成功",
       "createdAt": "2025-10-17T01:17:37.712Z",
-      "updatedAt": "2025-10-17T01:25:52.687Z",
+      "updatedAt": "2025-10-17T08:15:30.596Z",
       "errorMsg": "",
       "progress": 100,
       "localPath": "generated_images/shot_003.png",
@@ -221,9 +221,9 @@
     "[主体]\n角色：女医生rumi\n表情：兴奋\n动作：女医生rumi双手举着一把大型电锯，脸上露出狂热的笑容。\n[环境]\n纯白色的背景。\n[时间]\n白天\n[天气]\n无\n[视角]\n平视\n[景别]\n中景": "13",
     "[主体]\n角色：女医生rumi\n表情：兴奋\n动作：女医生rumi手持电锯，在一个明亮的医院走廊里朝镜头方向快速跑来，大笑着。\n[环境]\n一条现代化的医院走廊。\n[时间]\n白天\n[天气]\n无\n[视角]\n平视\n[景别]\n全景": "14",
     "[主体]\n角色：女医生rumi，男人juni\n表情：男人juni的表情是惊恐，女医生rumi的表情是兴奋\n动作：男人juni双手抱头，惊恐地在走廊里向前跑。女医生rumi在他身后紧追不舍，举着电锯。\n[环境]\n一条现代化的医院走廊。\n[时间]\n白天\n[天气]\n无\n[视角]\n平视\n[景别]\n全景": "15",
-    "主体：一只橘色的猫咪tom，毛发蓬松柔软\n表情：满足愉悦的表情，眼睛微眯\n动作：坐在餐桌前，用爪子捧着碗，正在低头吃早饭\n环境：温馨的家庭厨房，餐桌上摆放着牛奶和猫粮\n时间：清晨，窗外阳光透进\n天气：晴朗的早晨\n视角：平视角度\n景别：中景": "shot_001",
-    "主体：橘猫tom，身穿小学生校服\n表情：精神饱满，充满活力的样子\n动作：背着蓝色小书包，迈着轻快的步伐走在人行道上\n环境：安静的街道，两旁是住宅楼和绿树\n时间：早上八点左右\n天气：阳光明媚，天空湛蓝\n视角：侧面跟拍视角\n景别：全景": "shot_002",
-    "主体：橘猫tom，坐在课桌前，书包放在一旁\n表情动作：认真听讲，双眼注视前方黑板，前爪搭在课桌上，姿态端正\n环境：明亮的教室内部，整齐排列的课桌椅，黑板上有板书，墙上有教学挂图\n时间天气：白天，室内光线充足，窗外阳光透进\n视角景别：正面中近景，平视角度，突出tom专注上课的状态": "shot_003"
+    "主体：一只橘色的猫咪tom，圆润可爱的体型\n表情：满足愉悦的表情，眼睛微眯\n动作：坐在餐桌前，正低头享用早餐，用爪子捧着碗\n环境：温馨的家庭餐厅，木质餐桌上摆放着猫粮碗和牛奶\n时间：清晨，阳光透过窗户洒进室内\n天气：晴朗的早晨\n视角：侧面45度角拍摄\n景别：中景，突出猫咪用餐的场景": "shot_001",
+    "主体：橘猫tom，坐在课桌前\n表情：认真专注的表情，目光看向黑板\n动作：端正坐姿，前爪放在课桌上，做笔记状\n环境：明亮的教室内，黑板上有板书，周围有其他课桌椅\n时间：上午上课时间\n天气：室内场景，窗外阳光充足\n视角：侧前方斜角度\n景别：中景，突出橘猫认真听课的状态": "shot_003",
+    "主体：橘猫tom，身材圆润，橘黄色毛发\n表情：精神抖擞，眼神专注向前\n动作：直立行走，背着一个小书包，迈着轻快的步伐\n环境：干净整洁的街道，两旁是住宅楼和商店，人行道上有路灯\n时间：早上八点左右\n天气：晴朗，阳光明媚\n视角：侧面跟拍\n景别：全景": "shot_002"
   },
   "videoSettings": {
     "apiKey": "",
@@ -255,6 +255,131 @@
       "localPath": "../../../test-video/1_1759662363805_b42a20cc9951550cab24007e21bb78ff_1759662357.mp4",
       "remoteUrl": "https://tempfile.aiquickdraw.com/p/b42a20cc9951550cab24007e21bb78ff_1759662357.mp4",
       "actualFilename": "1_1759662363805_b42a20cc9951550cab24007e21bb78ff_1759662357.mp4"
+    },
+    {
+      "number": "2",
+      "prompt": "橘猫tom坐在餐桌前专注地享用早餐，神情满足而放松",
+      "imageUrls": [
+        "http://localhost:3000/generated_images/shot_001.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "失败",
+      "progress": 0,
+      "createdAt": "2025-10-17T07:35:10.132Z",
+      "errorMsg": "连接被服务器重置，已重试3次。可能原因：图片URL域名被阻止（建议使用postimg.cc等图床）",
+      "updatedAt": "2025-10-17T07:35:18.484Z"
+    },
+    {
+      "number": "3",
+      "prompt": "橘猫tom背着书包轻快地走在阳光洒落的街道上，尾巴摇晃显得朝气蓬勃",
+      "imageUrls": [
+        "http://localhost:3000/generated_images/shot_002.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "失败",
+      "progress": 0,
+      "createdAt": "2025-10-17T07:35:10.364Z",
+      "errorMsg": "连接被服务器重置，已重试3次。可能原因：图片URL域名被阻止（建议使用postimg.cc等图床）",
+      "updatedAt": "2025-10-17T07:35:18.228Z"
+    },
+    {
+      "number": "4",
+      "prompt": "橘猫tom端坐在教室课桌前认真听讲，眼神专注地望向前方",
+      "imageUrls": [
+        "http://localhost:3000/generated_images/shot_003.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "失败",
+      "progress": 5,
+      "createdAt": "2025-10-17T07:35:10.595Z",
+      "errorMsg": "连接被服务器重置，已重试3次。可能原因：图片URL域名被阻止（建议使用postimg.cc等图床）",
+      "updatedAt": "2025-10-17T07:35:17.992Z"
+    },
+    {
+      "number": "5",
+      "prompt": "橘猫tom坐在餐桌前享用早餐，神态放松惬意，镜头温馨平稳地展现清晨用餐时光",
+      "imageUrls": [
+        "http://localhost:3000/generated_images/shot_001.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "失败",
+      "progress": 0,
+      "createdAt": "2025-10-17T08:15:58.782Z",
+      "workflow": "A",
+      "attempts": 3,
+      "maxAttempts": 3,
+      "errorMsg": "read ECONNRESET",
+      "fingerprint": "d21b41f34edd82a6f9898f5d88973a70e7cc427711ece38ec0e99f1520885bbf",
+      "updatedAt": "2025-10-17T08:16:00.742Z",
+      "finishedAt": "2025-10-17T08:16:00.797Z"
+    },
+    {
+      "number": "6",
+      "prompt": "橘猫tom背着书包沿街道行走，步伐轻快充满朝气，镜头跟随展现上学路上的活力氛围",
+      "imageUrls": [
+        "http://localhost:3000/generated_images/shot_002.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "生成中",
+      "progress": 0,
+      "createdAt": "2025-10-17T08:15:59.036Z",
+      "workflow": "A",
+      "attempts": 3,
+      "maxAttempts": 3,
+      "errorMsg": "read ECONNRESET",
+      "fingerprint": "f48fb406e5e6dccf628555febc6536b3f20e518ba1a40c1e929f93731fe0b954",
+      "updatedAt": "2025-10-17T08:16:00.635Z",
+      "finishedAt": "2025-10-17T08:16:00.314Z",
+      "startedAt": "2025-10-17T08:16:00.637Z"
+    },
+    {
+      "number": "7",
+      "prompt": "橘猫tom坐在课桌前专注听课，表情认真投入，镜头平稳呈现安静的课堂学习场景",
+      "imageUrls": [
+        "http://localhost:3000/generated_images/shot_003.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "失败",
+      "progress": 0,
+      "createdAt": "2025-10-17T08:15:59.272Z",
+      "workflow": "A",
+      "attempts": 3,
+      "maxAttempts": 3,
+      "fingerprint": "2c6b4aa557a5f684764fe922389fc045a67f239a4e3e7dbe0dbc069340564b2b",
+      "updatedAt": "2025-10-17T08:16:00.794Z",
+      "startedAt": "2025-10-17T08:15:59.650Z",
+      "errorMsg": "read ECONNRESET",
+      "finishedAt": "2025-10-17T08:16:00.794Z"
     }
   ],
   "generatedImages": {},
