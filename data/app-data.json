@@ -47,7 +47,7 @@
       "apiKey": "a0d601be40ab985e269fa28916b1d724",
       "platform": "KIE.AI",
       "createdTime": "2025-09-27T13:21:18.598Z",
-      "lastUsed": "2025-10-17T08:16:00.554Z"
+      "lastUsed": "2025-10-17T08:26:10.244Z"
     },
     "yunwu": {
       "name": "yunwu",
@@ -380,6 +380,77 @@
       "startedAt": "2025-10-17T08:15:59.650Z",
       "errorMsg": "read ECONNRESET",
       "finishedAt": "2025-10-17T08:16:00.794Z"
+    },
+    {
+      "number": "8",
+      "prompt": "橘猫tom坐在餐桌前享用早餐，神态放松惬意，镜头温馨平稳地展现清晨用餐时光",
+      "imageUrls": [
+        "http://localhost:3001/generated_images/shot_001.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "失败",
+      "progress": 0,
+      "createdAt": "2025-10-17T08:26:08.215Z",
+      "workflow": "A",
+      "attempts": 3,
+      "maxAttempts": 3,
+      "errorMsg": "read ECONNRESET",
+      "fingerprint": "bfd461423ba7a8d25c6a65084c90aa9fba5afd76355ad96a2a5e24c9ce433b4a",
+      "updatedAt": "2025-10-17T08:26:10.426Z",
+      "finishedAt": "2025-10-17T08:26:10.427Z",
+      "startedAt": "2025-10-17T08:26:09.753Z"
+    },
+    {
+      "number": "9",
+      "prompt": "橘猫tom背着书包沿街道行走，步伐轻快充满朝气，镜头跟随展现上学路上的活力氛围",
+      "imageUrls": [
+        "http://localhost:3001/generated_images/shot_002.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "失败",
+      "progress": 0,
+      "createdAt": "2025-10-17T08:26:08.475Z",
+      "workflow": "A",
+      "attempts": 2,
+      "maxAttempts": 3,
+      "fingerprint": "4277d3b0df8077e48253ed5e3aa2b3b7d3291423bc04659aadafa81ca29d1ae7",
+      "updatedAt": "2025-10-17T08:26:09.909Z",
+      "errorMsg": "read ECONNRESET",
+      "finishedAt": "2025-10-17T08:26:09.909Z"
+    },
+    {
+      "number": "10",
+      "prompt": "橘猫tom坐在课桌前专注听课，表情认真投入，镜头平稳呈现安静的课堂学习场景",
+      "imageUrls": [
+        "http://localhost:3001/generated_images/shot_003.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "失败",
+      "progress": 0,
+      "createdAt": "2025-10-17T08:26:08.742Z",
+      "workflow": "A",
+      "attempts": 3,
+      "maxAttempts": 3,
+      "fingerprint": "f3864203f54d5290f76fb4eed59f878d95c1a2262d86c8f30222f87f66d71265",
+      "updatedAt": "2025-10-17T08:26:10.367Z",
+      "startedAt": "2025-10-17T08:26:09.163Z",
+      "errorMsg": "read ECONNRESET",
+      "finishedAt": "2025-10-17T08:26:10.429Z"
     }
   ],
   "generatedImages": {},

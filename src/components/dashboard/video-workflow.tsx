@@ -35,6 +35,29 @@ import {
   PromptEntry
 } from '@/lib/types';
 import { api } from '@/lib/api';
+import defaultWorkflow from '@/data/default-video-workflow.json';
+
+type DefaultWorkflow = {
+  script: string;
+  shots: ShotPrompt[];
+  images: GeneratedImage[];
+  videoPrompts: VideoPrompt[];
+};
+
+const DEFAULT_WORKFLOW: DefaultWorkflow = {
+  script: defaultWorkflow.script ?? `整个故事脚本只有一个角色A（橘猫tom），故事只有3个分镜，故事如下：
+
+橘猫tom在吃早饭
+橘猫tom背着书包走在街道上
+橘猫tom在教室内上课`,
+  shots: (defaultWorkflow.shots as ShotPrompt[] | undefined) ?? [],
+  images:
+    (defaultWorkflow.images as GeneratedImage[] | undefined)?.map((image) => ({
+      ...image,
+      source: image.source ?? 'generated',
+    })) ?? [],
+  videoPrompts: (defaultWorkflow.videoPrompts as VideoPrompt[] | undefined) ?? [],
+};
 
 interface WorkflowStep {
   id: string;
@@ -45,24 +68,20 @@ interface WorkflowStep {
 }
 
 export function VideoWorkflow() {
-  const [script, setScript] = useState(`整个故事脚本只有一个角色A（橘猫tom），故事只有3个分镜，故事如下：
-
-橘猫tom在吃早饭
-橘猫tom背着书包走在街道上
-橘猫tom在教室内上课`);
+  const [script, setScript] = useState(DEFAULT_WORKFLOW.script);
   const [steps, setSteps] = useState<WorkflowStep[]>([
-    { id: 'script', title: '输入脚本', description: '输入故事脚本', status: 'pending' },
-    { id: 'shots', title: '生成分镜', description: 'AI 生成分镜 JSON', status: 'pending' },
-    { id: 'images', title: '批量出图', description: '生成图片（Mock）', status: 'pending' },
-    { id: 'edit', title: '编辑排序', description: '拖拽排序、上传补图', status: 'pending' },
-    { id: 'video-prompts', title: '视频提示词', description: '生成图生视频提示词', status: 'pending' },
+    { id: 'script', title: '输入脚本', description: '输入故事脚本', status: DEFAULT_WORKFLOW.script ? 'completed' : 'pending', data: DEFAULT_WORKFLOW.script },
+    { id: 'shots', title: '生成分镜', description: 'AI 生成分镜 JSON', status: DEFAULT_WORKFLOW.shots.length ? 'completed' : 'pending', data: DEFAULT_WORKFLOW.shots },
+    { id: 'images', title: '批量出图', description: '生成图片（Mock）', status: DEFAULT_WORKFLOW.images.length ? 'completed' : 'pending', data: DEFAULT_WORKFLOW.images },
+    { id: 'edit', title: '编辑排序', description: '拖拽排序、上传补图', status: DEFAULT_WORKFLOW.images.length ? 'pending' : 'pending' },
+    { id: 'video-prompts', title: '视频提示词', description: '生成图生视频提示词', status: DEFAULT_WORKFLOW.videoPrompts.length ? 'completed' : 'pending', data: DEFAULT_WORKFLOW.videoPrompts },
     { id: 'video-batch', title: '批量出视频', description: '提交图生视频任务', status: 'pending' },
-    { id: 'export', title: '导出结果', description: '导出 JSON/CSV', status: 'pending' }
+    { id: 'export', title: '导出结果', description: '导出 JSON/CSV', status: DEFAULT_WORKFLOW.videoPrompts.length ? 'pending' : 'pending' }
   ]);
   
-  const [shotPrompts, setShotPrompts] = useState<ShotPrompt[]>([]);
-  const [images, setImages] = useState<GeneratedImage[]>([]);
-  const [videoPrompts, setVideoPrompts] = useState<VideoPrompt[]>([]);
+  const [shotPrompts, setShotPrompts] = useState<ShotPrompt[]>(DEFAULT_WORKFLOW.shots);
+  const [images, setImages] = useState<GeneratedImage[]>(DEFAULT_WORKFLOW.images);
+  const [videoPrompts, setVideoPrompts] = useState<VideoPrompt[]>(DEFAULT_WORKFLOW.videoPrompts);
   const [videoBatchInfo, setVideoBatchInfo] = useState<{ numbers: string[]; message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

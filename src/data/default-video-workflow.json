@@ -1,0 +1,48 @@
+{
+  "script": "整个故事脚本只有一个角色A（橘猫tom），故事只有3个分镜，故事如下：\n\n橘猫tom在吃早饭\n橘猫tom背着书包走在街道上\n橘猫tom在教室内上课",
+  "shots": [
+    {
+      "shot_id": "shot_001",
+      "image_prompt": "主体：一只橘色的猫咪tom，圆润的身材，橘黄色的毛发\n表情：温柔惬意的微笑，眼睛微眯\n动作：坐在餐桌前，用前爪拿着碗，正在吃早餐\n环境：温馨的家庭厨房，窗边透进清晨的阳光，桌上摆放着牛奶和猫粮\n时间：早晨\n天气：晴朗的清晨\n视角：正面平视\n景别：中景"
+    },
+    {
+      "shot_id": "shot_002",
+      "image_prompt": "主体：橘猫tom，身材圆润，橘黄色毛发\n表情：精神饱满，眼神专注向前\n动作：直立行走，背着一个小书包，迈着轻快的步伐\n环境：干净整洁的街道，两旁是住宅与商店，人行道上有路灯\n时间：早上八点左右\n天气：晴朗，阳光明媚\n视角：侧面圆拍\n景别：全景"
+    },
+    {
+      "shot_id": "shot_003",
+      "image_prompt": "主体：橘猫tom，橘黄色毛发，圆润体型\n表情：认真专注，眼睛看着黑板方向\n动作：端坐在课桌前，前爪放在课本和文具上\n环境：明亮的教室，黑板、课桌整齐排列，墙上有挂图\n时间：上午上课时间\n天气：室内光线充足\n视角：侧前方约45度\n景别：中近景"
+    }
+  ],
+  "images": [
+    {
+      "shot_id": "shot_001",
+      "url": "/generated_images/shot_001.png",
+      "source": "generated"
+    },
+    {
+      "shot_id": "shot_002",
+      "url": "/generated_images/shot_002.png",
+      "source": "generated"
+    },
+    {
+      "shot_id": "shot_003",
+      "url": "/generated_images/shot_003.png",
+      "source": "generated"
+    }
+  ],
+  "videoPrompts": [
+    {
+      "shot_id": "shot_001",
+      "image_prompt": "橘猫tom坐在餐桌前享用早餐，神态放松惬意，镜头温馨平稳地展现清晨用餐时光"
+    },
+    {
+      "shot_id": "shot_002",
+      "image_prompt": "橘猫tom背着书包沿街道行走，步伐轻快充满朝气，镜头跟随展现上学路上的活力氛围"
+    },
+    {
+      "shot_id": "shot_003",
+      "image_prompt": "橘猫tom坐在课桌前专注听课，表情认真投入，镜头平稳呈现安静的课堂学习场景"
+    }
+  ]
+}
