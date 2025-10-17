@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Play,
   Upload,
@@ -155,6 +155,26 @@ export function VideoWorkflow() {
       }),
     [workflowSettings],
   );
+  const selectFolderMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/system/select-folder', { method: 'POST' });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.message || '选择文件夹失败');
+      }
+      return (await response.json()) as { success: boolean; path: string };
+    },
+    onSuccess: async (result) => {
+      if (result?.success && result.path) {
+        await api.updateSettings({ videoSettings: { savePath: result.path } });
+        toast.success(`已更新视频存储文件夹：${result.path}`);
+        await queryClient.invalidateQueries({ queryKey: ['settings'] });
+      } else {
+        toast.error('选择文件夹失败');
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || '选择文件夹失败'),
+  });
 
   const updateStepStatus = useCallback((stepId: string, status: WorkflowStep['status'], data?: unknown) => {
     setSteps(prev =>
@@ -1353,6 +1373,19 @@ export function VideoWorkflow() {
 
             {/* 操作按钮 */}
             <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => selectFolderMutation.mutate()}
+                disabled={selectFolderMutation.isPending}
+                className="flex-1 md:flex-none"
+              >
+                {selectFolderMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
+                选择视频存储文件夹
+              </Button>
               <Button
                 onClick={handleBatchUploadToR2}
                 disabled={isUploadingToR2 || isGeneratingVideos || isLoading}
