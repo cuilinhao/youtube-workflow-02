@@ -84,5 +84,30 @@ export async function generateVideos({ numbers, workflow = 'A' }: GenerateVideos
     await Promise.all(finalTasks.map(handleTaskUpdate));
   }
 
+  const failedTasks = finalTasks.filter((task) => task.status === 'failed' || task.status === 'timeout');
+  const succeededTasks = finalTasks.filter((task) => task.status === 'succeeded');
+
+  if (failedTasks.length) {
+    const failedDetails = failedTasks.map((task) => ({
+      number: task.id,
+      status: task.status,
+      error: task.errorMessage ?? '未知错误',
+    }));
+
+    if (!succeededTasks.length) {
+      return {
+        success: false,
+        message: '所有视频任务提交失败',
+        failed: failedDetails,
+      };
+    }
+
+    return {
+      success: true,
+      message: `部分视频任务失败 (${failedTasks.length}/${finalTasks.length})`,
+      failed: failedDetails,
+    };
+  }
+
   return { success: true };
 }

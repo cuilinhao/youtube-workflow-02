@@ -47,7 +47,7 @@
       "apiKey": "a0d601be40ab985e269fa28916b1d724",
       "platform": "KIE.AI",
       "createdTime": "2025-09-27T13:21:18.598Z",
-      "lastUsed": "2025-10-17T11:01:37.670Z"
+      "lastUsed": "2025-10-17T14:51:02.712Z"
     },
     "yunwu": {
       "name": "yunwu",
@@ -246,7 +246,35 @@
     "enableFallback": false,
     "enableTranslation": true
   },
-  "videoTasks": [],
+  "videoTasks": [
+    {
+      "number": "1",
+      "prompt": "橘猫tom背着书包沿街道行走，步伐轻快充满朝气，镜头跟随展现上学路上的活力氛围",
+      "imageUrls": [
+        "https://pub-0e00591269e142acabd1ae9ac18c8d65.r2.dev/uploads/videos/20251017/shot_002.png"
+      ],
+      "aspectRatio": "16:9",
+      "watermark": "",
+      "callbackUrl": "",
+      "seeds": "",
+      "enableFallback": false,
+      "enableTranslation": true,
+      "status": "成功",
+      "progress": 100,
+      "createdAt": "2025-10-17T15:02:41.406Z",
+      "workflow": "A",
+      "attempts": 1,
+      "maxAttempts": 3,
+      "fingerprint": "dfa7eb26c7fcfab89691d374e077543b8047d4eb65e3db200a1251c3fafb5ba5",
+      "updatedAt": "2025-10-17T15:04:15.409Z",
+      "startedAt": "2025-10-17T15:02:42.158Z",
+      "providerRequestId": "f1019e1b993a925f2c1ab55bd1867cd5",
+      "remoteUrl": "https://tempfile.aiquickdraw.com/v/f1019e1b993a925f2c1ab55bd1867cd5_1760713445.mp4",
+      "localPath": "../../../test-flow/20251017/1_99cfaea1_f1019e1b993a925f2c1ab55bd1867cd5_1760713445.mp4",
+      "actualFilename": "1_99cfaea1_f1019e1b993a925f2c1ab55bd1867cd5_1760713445.mp4",
+      "finishedAt": "2025-10-17T15:04:15.411Z"
+    }
+  ],
   "generatedImages": {},
   "generatedVideos": []
 }

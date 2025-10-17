@@ -1,3 +1,4 @@
+import '@/server-init';
 import { NextResponse } from 'next/server';
 import { generateVideos } from '@/lib/video-generation';
 
