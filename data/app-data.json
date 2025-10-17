@@ -47,7 +47,7 @@
       "apiKey": "a0d601be40ab985e269fa28916b1d724",
       "platform": "KIE.AI",
       "createdTime": "2025-09-27T13:21:18.598Z",
-      "lastUsed": "2025-10-17T08:26:10.244Z"
+      "lastUsed": "2025-10-17T10:32:56.975Z"
     },
     "yunwu": {
       "name": "yunwu",
@@ -227,7 +227,7 @@
   },
   "videoSettings": {
     "apiKey": "",
-    "savePath": "/Users/linhao/Desktop/test-video",
+    "savePath": "/Users/linhao/Desktop/test-flow",
     "defaultAspectRatio": "16:9",
     "defaultWatermark": "",
     "defaultCallback": "",
@@ -237,84 +237,9 @@
   "videoTasks": [
     {
       "number": "1",
-      "prompt": "在唱歌",
-      "imageUrls": [
-        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/video-references/1759662222645/bbb.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251005%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251005T110344Z&X-Amz-Expires=300&X-Amz-Signature=89c8b4a532301a8efd7211c3f3961c2c80b45d35f09dfda49bea041adcda63ae&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "成功",
-      "progress": 100,
-      "createdAt": "2025-10-05T11:03:51.396Z",
-      "errorMsg": "",
-      "updatedAt": "2025-10-05T11:06:06.889Z",
-      "localPath": "../../../test-video/1_1759662363805_b42a20cc9951550cab24007e21bb78ff_1759662357.mp4",
-      "remoteUrl": "https://tempfile.aiquickdraw.com/p/b42a20cc9951550cab24007e21bb78ff_1759662357.mp4",
-      "actualFilename": "1_1759662363805_b42a20cc9951550cab24007e21bb78ff_1759662357.mp4"
-    },
-    {
-      "number": "2",
-      "prompt": "橘猫tom坐在餐桌前专注地享用早餐，神情满足而放松",
-      "imageUrls": [
-        "http://localhost:3000/generated_images/shot_001.png"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T07:35:10.132Z",
-      "errorMsg": "连接被服务器重置，已重试3次。可能原因：图片URL域名被阻止（建议使用postimg.cc等图床）",
-      "updatedAt": "2025-10-17T07:35:18.484Z"
-    },
-    {
-      "number": "3",
-      "prompt": "橘猫tom背着书包轻快地走在阳光洒落的街道上，尾巴摇晃显得朝气蓬勃",
-      "imageUrls": [
-        "http://localhost:3000/generated_images/shot_002.png"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T07:35:10.364Z",
-      "errorMsg": "连接被服务器重置，已重试3次。可能原因：图片URL域名被阻止（建议使用postimg.cc等图床）",
-      "updatedAt": "2025-10-17T07:35:18.228Z"
-    },
-    {
-      "number": "4",
-      "prompt": "橘猫tom端坐在教室课桌前认真听讲，眼神专注地望向前方",
-      "imageUrls": [
-        "http://localhost:3000/generated_images/shot_003.png"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 5,
-      "createdAt": "2025-10-17T07:35:10.595Z",
-      "errorMsg": "连接被服务器重置，已重试3次。可能原因：图片URL域名被阻止（建议使用postimg.cc等图床）",
-      "updatedAt": "2025-10-17T07:35:17.992Z"
-    },
-    {
-      "number": "5",
       "prompt": "橘猫tom坐在餐桌前享用早餐，神态放松惬意，镜头温馨平稳地展现清晨用餐时光",
       "imageUrls": [
-        "http://localhost:3000/generated_images/shot_001.png"
+        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/videos/20251017/shot_001.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T103248Z&X-Amz-Expires=300&X-Amz-Signature=b821cfdd1e3df20b17f8b47e4d707d0002ce98a288f9f59b75af02f50f1afb11&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
       ],
       "aspectRatio": "16:9",
       "watermark": "",
@@ -324,20 +249,21 @@
       "enableTranslation": true,
       "status": "失败",
       "progress": 0,
-      "createdAt": "2025-10-17T08:15:58.782Z",
+      "createdAt": "2025-10-17T10:32:54.822Z",
       "workflow": "A",
       "attempts": 3,
       "maxAttempts": 3,
       "errorMsg": "read ECONNRESET",
-      "fingerprint": "d21b41f34edd82a6f9898f5d88973a70e7cc427711ece38ec0e99f1520885bbf",
-      "updatedAt": "2025-10-17T08:16:00.742Z",
-      "finishedAt": "2025-10-17T08:16:00.797Z"
+      "fingerprint": "881b0298a1ecce02cc4ce7f5e71f3c95916f09fbec94f31c5171560887a0899a",
+      "updatedAt": "2025-10-17T10:32:57.133Z",
+      "finishedAt": "2025-10-17T10:32:57.133Z",
+      "startedAt": "2025-10-17T10:32:56.520Z"
     },
     {
-      "number": "6",
+      "number": "2",
       "prompt": "橘猫tom背着书包沿街道行走，步伐轻快充满朝气，镜头跟随展现上学路上的活力氛围",
       "imageUrls": [
-        "http://localhost:3000/generated_images/shot_002.png"
+        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/videos/20251017/shot_002.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T103250Z&X-Amz-Expires=300&X-Amz-Signature=dc825f6b80ce7310a501504f4b634e906ec9f0dde73da949dd5f5a4e40468403&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
       ],
       "aspectRatio": "16:9",
       "watermark": "",
@@ -347,21 +273,21 @@
       "enableTranslation": true,
       "status": "生成中",
       "progress": 0,
-      "createdAt": "2025-10-17T08:15:59.036Z",
+      "createdAt": "2025-10-17T10:32:55.077Z",
       "workflow": "A",
       "attempts": 3,
       "maxAttempts": 3,
+      "fingerprint": "fe7408f61a8d77c055052e02eb73cfcd224af83193ae0163f04e57c672ab94f8",
+      "updatedAt": "2025-10-17T10:32:57.058Z",
       "errorMsg": "read ECONNRESET",
-      "fingerprint": "f48fb406e5e6dccf628555febc6536b3f20e518ba1a40c1e929f93731fe0b954",
-      "updatedAt": "2025-10-17T08:16:00.635Z",
-      "finishedAt": "2025-10-17T08:16:00.314Z",
-      "startedAt": "2025-10-17T08:16:00.637Z"
+      "finishedAt": "2025-10-17T10:32:56.737Z",
+      "startedAt": "2025-10-17T10:32:57.061Z"
     },
     {
-      "number": "7",
+      "number": "3",
       "prompt": "橘猫tom坐在课桌前专注听课，表情认真投入，镜头平稳呈现安静的课堂学习场景",
       "imageUrls": [
-        "http://localhost:3000/generated_images/shot_003.png"
+        "https://8021c9867ba6881cf688f0a25af0d32f.r2.cloudflarestorage.com/ai-image-video/uploads/videos/20251017/shot_003.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=d9a144f5fdd746dc53d078cb8912afcb%2F20251017%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251017T103248Z&X-Amz-Expires=300&X-Amz-Signature=7149058d32a9026c8d212853d50fe67e3f4c5a7422bfacdf6857c02d6a29fd74&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
       ],
       "aspectRatio": "16:9",
       "watermark": "",
@@ -371,86 +297,15 @@
       "enableTranslation": true,
       "status": "失败",
       "progress": 0,
-      "createdAt": "2025-10-17T08:15:59.272Z",
-      "workflow": "A",
-      "attempts": 3,
-      "maxAttempts": 3,
-      "fingerprint": "2c6b4aa557a5f684764fe922389fc045a67f239a4e3e7dbe0dbc069340564b2b",
-      "updatedAt": "2025-10-17T08:16:00.794Z",
-      "startedAt": "2025-10-17T08:15:59.650Z",
-      "errorMsg": "read ECONNRESET",
-      "finishedAt": "2025-10-17T08:16:00.794Z"
-    },
-    {
-      "number": "8",
-      "prompt": "橘猫tom坐在餐桌前享用早餐，神态放松惬意，镜头温馨平稳地展现清晨用餐时光",
-      "imageUrls": [
-        "http://localhost:3001/generated_images/shot_001.png"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T08:26:08.215Z",
+      "createdAt": "2025-10-17T10:32:55.342Z",
       "workflow": "A",
       "attempts": 3,
       "maxAttempts": 3,
       "errorMsg": "read ECONNRESET",
-      "fingerprint": "bfd461423ba7a8d25c6a65084c90aa9fba5afd76355ad96a2a5e24c9ce433b4a",
-      "updatedAt": "2025-10-17T08:26:10.426Z",
-      "finishedAt": "2025-10-17T08:26:10.427Z",
-      "startedAt": "2025-10-17T08:26:09.753Z"
-    },
-    {
-      "number": "9",
-      "prompt": "橘猫tom背着书包沿街道行走，步伐轻快充满朝气，镜头跟随展现上学路上的活力氛围",
-      "imageUrls": [
-        "http://localhost:3001/generated_images/shot_002.png"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T08:26:08.475Z",
-      "workflow": "A",
-      "attempts": 2,
-      "maxAttempts": 3,
-      "fingerprint": "4277d3b0df8077e48253ed5e3aa2b3b7d3291423bc04659aadafa81ca29d1ae7",
-      "updatedAt": "2025-10-17T08:26:09.909Z",
-      "errorMsg": "read ECONNRESET",
-      "finishedAt": "2025-10-17T08:26:09.909Z"
-    },
-    {
-      "number": "10",
-      "prompt": "橘猫tom坐在课桌前专注听课，表情认真投入，镜头平稳呈现安静的课堂学习场景",
-      "imageUrls": [
-        "http://localhost:3001/generated_images/shot_003.png"
-      ],
-      "aspectRatio": "16:9",
-      "watermark": "",
-      "callbackUrl": "",
-      "seeds": "",
-      "enableFallback": false,
-      "enableTranslation": true,
-      "status": "失败",
-      "progress": 0,
-      "createdAt": "2025-10-17T08:26:08.742Z",
-      "workflow": "A",
-      "attempts": 3,
-      "maxAttempts": 3,
-      "fingerprint": "f3864203f54d5290f76fb4eed59f878d95c1a2262d86c8f30222f87f66d71265",
-      "updatedAt": "2025-10-17T08:26:10.367Z",
-      "startedAt": "2025-10-17T08:26:09.163Z",
-      "errorMsg": "read ECONNRESET",
-      "finishedAt": "2025-10-17T08:26:10.429Z"
+      "fingerprint": "197c83e3ccb2141ba7dfbda3b5d3c22c0f3b8f9f3ed6a727bf91ea02a31b0332",
+      "updatedAt": "2025-10-17T10:32:57.191Z",
+      "finishedAt": "2025-10-17T10:32:57.250Z",
+      "startedAt": "2025-10-17T10:32:56.550Z"
     }
   ],
   "generatedImages": {},

@@ -1,7 +1,7 @@
 const R2_PUBLIC_BASE = process.env.NEXT_PUBLIC_R2_PUBLIC_BASE || '';
 const R2_REQUIRED_PREFIX = 'uploads';
 
-type PresignResp = { uploadUrl: string; key: string; contentType: string };
+type PresignResp = { url: string; key: string; publicUrl?: string | null };
 type GetUrlResp = { url: string };
 
 function guessContentType(name: string, fallback = 'application/octet-stream') {
@@ -40,7 +40,11 @@ export async function uploadBlobToR2(params: {
     const text = await presignResponse.text();
     throw new Error(`[R2 presign] ${presignResponse.status} ${text || presignResponse.statusText}`);
   }
-  const { uploadUrl }: PresignResp = await presignResponse.json();
+  const presignPayload = (await presignResponse.json()) as PresignResp;
+  const uploadUrl = presignPayload.url;
+  if (!uploadUrl) {
+    throw new Error('[R2 presign] Missing signed upload URL');
+  }
 
   onProgress?.(0);
   const putResponse = await fetch(uploadUrl, {
@@ -59,10 +63,13 @@ export async function uploadBlobToR2(params: {
     return { key, url: `${base}/${encodeURI(key)}` };
   }
 
-  const getUrlResponse = await fetch('/api/r2/presign-get', {
-    method: 'POST',
+  if (presignPayload.publicUrl) {
+    return { key, url: presignPayload.publicUrl };
+  }
+
+  const getUrlResponse = await fetch(`/api/r2/presign-get?key=${encodeURIComponent(key)}`, {
+    method: 'GET',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key }),
   });
   if (!getUrlResponse.ok) {
     const text = await getUrlResponse.text();

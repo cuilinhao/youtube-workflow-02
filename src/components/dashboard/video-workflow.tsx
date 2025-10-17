@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Play,
   Upload,
@@ -41,6 +42,7 @@ import defaultWorkflow from '@/data/default-video-workflow.json';
 import pLimit from 'p-limit';
 import { ensureRemoteImageUrl } from '@/lib/r2/r2Upload';
 import { toast } from 'sonner';
+import { VideoTaskBoard } from '@/components/dashboard/video-task-board';
 
 type DefaultWorkflow = {
   script: string;
@@ -64,7 +66,19 @@ const DEFAULT_WORKFLOW: DefaultWorkflow = {
   videoPrompts: (defaultWorkflow.videoPrompts as VideoPrompt[] | undefined) ?? [],
 };
 
-const r2UrlCache = new Map<string, string>();
+function formatUrlDisplay(raw?: string | null) {
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    const decodedPath = decodeURIComponent(parsed.pathname);
+    const segments = decodedPath.split('/').filter(Boolean);
+    if (segments.length) return segments[segments.length - 1];
+  } catch {
+    // ignore invalid urls
+  }
+  const parts = raw.split(/[\\/]/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : raw;
+}
 
 interface WorkflowStep {
   id: string;
@@ -87,6 +101,7 @@ interface ImageUploadStatus {
 }
 
 export function VideoWorkflow() {
+  const queryClient = useQueryClient();
   const [script, setScript] = useState(DEFAULT_WORKFLOW.script);
   const [steps, setSteps] = useState<WorkflowStep[]>([
     { id: 'script', title: '输入脚本', description: '输入故事脚本', status: DEFAULT_WORKFLOW.script ? 'completed' : 'pending', data: DEFAULT_WORKFLOW.script },
@@ -101,7 +116,7 @@ export function VideoWorkflow() {
   const [shotPrompts, setShotPrompts] = useState<ShotPrompt[]>(DEFAULT_WORKFLOW.shots);
   const [images, setImages] = useState<GeneratedImage[]>(DEFAULT_WORKFLOW.images);
   const [videoPrompts, setVideoPrompts] = useState<VideoPrompt[]>(DEFAULT_WORKFLOW.videoPrompts);
-  const [videoBatchInfo, setVideoBatchInfo] = useState<{ numbers: string[]; message: string } | null>(null);
+  const [createdTaskNumbers, setCreatedTaskNumbers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
@@ -142,7 +157,7 @@ export function VideoWorkflow() {
       updateStepStatus('shots', 'completed', updatedShots);
     }
     setVideoPrompts(prev => (prev.length > 0 ? [] : prev));
-    setVideoBatchInfo(null);
+    setCreatedTaskNumbers([]);
     updateStepStatus('images', 'completed', data.images);
     updateStepStatus('edit', 'pending');
     updateStepStatus('video-prompts', 'pending');
@@ -251,7 +266,7 @@ export function VideoWorkflow() {
       setShotPrompts(data.shots);
       setVideoPrompts([]);
       setImages([]);
-      setVideoBatchInfo(null);
+      setCreatedTaskNumbers([]);
       updateStepStatus('shots', 'completed', data.shots);
       updateStepStatus('images', 'pending');
       updateStepStatus('edit', 'pending');
@@ -441,7 +456,7 @@ export function VideoWorkflow() {
         }
 
         setImages(nextImages);
-        setVideoBatchInfo(null);
+        setCreatedTaskNumbers([]);
         updateStepStatus('images', 'completed', nextImages);
         updateStepStatus('edit', 'pending');
         updateStepStatus('video-prompts', 'pending');
@@ -482,7 +497,7 @@ export function VideoWorkflow() {
     try {
       const uploadedImages = await Promise.all(uploadPromises);
       setImages(prev => [...prev, ...uploadedImages]);
-      setVideoBatchInfo(null);
+      setCreatedTaskNumbers([]);
       updateStepStatus('video-prompts', 'pending');
       updateStepStatus('video-batch', 'pending');
       updateStepStatus('export', 'pending');
@@ -552,7 +567,7 @@ export function VideoWorkflow() {
       );
 
       setVideoPrompts(data.prompts);
-      setVideoBatchInfo(null);
+      setCreatedTaskNumbers([]);
       updateStepStatus('video-prompts', 'completed', data.prompts);
       updateStepStatus('video-batch', 'pending');
       updateStepStatus('export', 'pending');
@@ -596,6 +611,7 @@ export function VideoWorkflow() {
 
     setIsUploadingToR2(true);
     setError(null);
+    setCreatedTaskNumbers([]);
 
     // 初始化状态
     const initialStatus: ImageUploadStatus[] = videoPrompts.map((prompt) => {
@@ -778,6 +794,9 @@ export function VideoWorkflow() {
         throw new Error('没有可提交的视频任务');
       }
 
+      await queryClient.invalidateQueries({ queryKey: ['video-tasks'] });
+      await queryClient.refetchQueries({ queryKey: ['video-tasks'], type: 'active' });
+
       // 启动批量生成
       console.info('[VideoWorkflow] Video tasks created, starting generation', {
         numbers: createdNumbers,
@@ -793,6 +812,9 @@ export function VideoWorkflow() {
         throw new Error(startResponse.message ?? '批量出视频任务提交失败');
       }
 
+      await queryClient.invalidateQueries({ queryKey: ['video-tasks'] });
+      await queryClient.refetchQueries({ queryKey: ['video-tasks'], type: 'active' });
+
       // 更新所有状态为已完成
       setBatchVideoStatus((prev) =>
         prev.map((s) =>
@@ -803,7 +825,8 @@ export function VideoWorkflow() {
       );
 
       const summary = `已创建并启动 ${createdNumbers.length} 个视频任务`;
-      setVideoBatchInfo({ numbers: createdNumbers, message: summary });
+      setCreatedTaskNumbers(createdNumbers);
+      setWarning(summary);
       updateStepStatus('video-batch', 'completed', createdNumbers);
       updateStepStatus('export', 'pending');
       toast.success(summary);
@@ -813,7 +836,7 @@ export function VideoWorkflow() {
     } catch (err) {
       const message = err instanceof Error ? err.message : '批量出视频失败';
       setError(message);
-      setVideoBatchInfo(null);
+      setCreatedTaskNumbers([]);
       updateStepStatus('video-batch', 'error');
       toast.error(message);
       console.error('[VideoWorkflow] Batch video generation failed', err);
@@ -824,7 +847,7 @@ export function VideoWorkflow() {
 
   const handleDeleteImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
-    setVideoBatchInfo(null);
+    setCreatedTaskNumbers([]);
     updateStepStatus('video-batch', 'pending');
   };
 
@@ -835,7 +858,7 @@ export function VideoWorkflow() {
       newImages.splice(toIndex, 0, movedImage);
       return newImages;
     });
-    setVideoBatchInfo(null);
+    setCreatedTaskNumbers([]);
     updateStepStatus('video-batch', 'pending');
   };
 
@@ -952,7 +975,7 @@ export function VideoWorkflow() {
             updateStepStatus('images', 'pending');
             setImages([]);
             setVideoPrompts([]);
-            setVideoBatchInfo(null);
+            setCreatedTaskNumbers([]);
             updateStepStatus('edit', 'pending');
             updateStepStatus('video-prompts', 'pending');
             updateStepStatus('video-batch', 'pending');
@@ -971,7 +994,7 @@ export function VideoWorkflow() {
           }
           if (prompts.length > 0) {
             setVideoPrompts(prompts);
-            setVideoBatchInfo(null);
+            setCreatedTaskNumbers([]);
             updateStepStatus('video-prompts', 'completed', prompts);
             updateStepStatus('video-batch', 'pending');
             updateStepStatus('export', 'pending');
@@ -1501,7 +1524,15 @@ export function VideoWorkflow() {
                       {/* R2 URL */}
                       {item.r2Url && (
                         <div className="text-xs text-gray-500 truncate" title={item.r2Url}>
-                          R2 URL: {item.r2Url}
+                          R2 URL:{' '}
+                          <a
+                            href={item.r2Url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 underline-offset-2 hover:underline"
+                          >
+                            {formatUrlDisplay(item.r2Url)}
+                          </a>
                         </div>
                       )}
                     </div>
@@ -1510,23 +1541,27 @@ export function VideoWorkflow() {
               </div>
             )}
 
-            {videoBatchInfo && (
-              <Alert>
-                <AlertDescription className="space-y-2">
-                  <div>{videoBatchInfo.message}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {videoBatchInfo.numbers.map((number) => (
-                      <Badge key={number} variant="secondary">
-                        任务 #{number}
-                      </Badge>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    请在左侧导航中的「批量图生视频」模块查看详细进度
-                  </p>
-                </AlertDescription>
-              </Alert>
+            {createdTaskNumbers.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                <span>本次生成的任务编号:</span>
+                <div className="flex flex-wrap gap-2">
+                  {createdTaskNumbers.map((number) => (
+                    <Badge key={number} variant="secondary">
+                      #{number}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             )}
+
+            <div className="border border-slate-200 rounded-lg">
+              <VideoTaskBoard
+                variant="embedded"
+                showCreateButton={false}
+                showGenerateButton={false}
+                highlightNumbers={createdTaskNumbers}
+              />
+            </div>
           </CardContent>
         </Card>
       )}

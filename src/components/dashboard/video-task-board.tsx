@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyboardEvent, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,14 @@ const STATUS_COLOR: Record<string, string> = {
   提交中: 'bg-sky-100 text-sky-700 border border-sky-200',
 };
 
+interface VideoTaskBoardProps {
+  variant?: 'default' | 'embedded';
+  showCreateButton?: boolean;
+  showGenerateButton?: boolean;
+  highlightNumbers?: string[];
+  className?: string;
+}
+
 function getFileName(raw?: string | null) {
   if (!raw) return '';
 
@@ -40,7 +48,7 @@ function getFileName(raw?: string | null) {
     const decodedPath = decodeURIComponent(parsed.pathname);
     const segments = decodedPath.split('/').filter(Boolean);
     if (segments.length) return segments[segments.length - 1];
-  } catch (error) {
+  } catch {
     // Not a valid URL, fall back to path-style parsing
   }
 
@@ -62,7 +70,13 @@ function getDirectoryPath(raw?: string | null) {
   return segments.join('/');
 }
 
-export function VideoTaskBoard() {
+export function VideoTaskBoard({
+  variant = 'default',
+  showCreateButton = true,
+  showGenerateButton = true,
+  highlightNumbers = [],
+  className,
+}: VideoTaskBoardProps = {}) {
   const queryClient = useQueryClient();
   const { data: videoData, isLoading } = useQuery({
     queryKey: ['video-tasks'],
@@ -107,6 +121,16 @@ export function VideoTaskBoard() {
 
   const [activePage, setActivePage] = useState<'tasks' | 'create'>('tasks');
   const [formResetKey, setFormResetKey] = useState(0);
+  const isEmbedded = variant === 'embedded';
+  const highlightSet = useMemo(() => new Set(highlightNumbers), [highlightNumbers]);
+
+  useEffect(() => {
+    if (!showCreateButton && activePage !== 'tasks') {
+      setActivePage('tasks');
+    }
+  }, [showCreateButton, activePage]);
+
+  const containerClassName = cn('space-y-6', isEmbedded && 'space-y-4', className);
 
   const addTaskMutation = useMutation({
     mutationFn: async (payload: VideoTaskFormSubmitPayload) => {
@@ -343,9 +367,9 @@ export function VideoTaskBoard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={containerClassName}>
       {activePage === 'tasks' ? (
-        <Card className="shadow-sm border border-slate-200">
+        <Card className={cn(isEmbedded ? 'shadow-none border-0' : 'shadow-sm border border-slate-200')}>
           <CardHeader className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -358,13 +382,15 @@ export function VideoTaskBoard() {
                   <span className="text-emerald-600">成功 {videoTasks.filter((item) => item.status === '成功').length}</span>
                   <span className="text-rose-600">失败 {videoTasks.filter((item) => item.status === '失败').length}</span>
                 </div>
-                <Button
-                  size="sm"
-                  className="bg-purple-600 hover:bg-purple-700"
-                  onClick={() => setActivePage('create')}
-                >
-                  添加任务
-                </Button>
+                {showCreateButton && (
+                  <Button
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700"
+                    onClick={() => setActivePage('create')}
+                  >
+                    添加任务
+                  </Button>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -392,14 +418,16 @@ export function VideoTaskBoard() {
               >
                 视频存储文件夹
               </Button>
-              <Button
-                size="sm"
-                className="ml-auto bg-purple-600 hover:bg-purple-700"
-                disabled={generateMutation.isPending}
-                onClick={handleStartGeneration}
-              >
-                <PlayCircleIcon className="mr-2 h-4 w-4" /> 开始生成视频
-              </Button>
+              {showGenerateButton && (
+                <Button
+                  size="sm"
+                  className="ml-auto bg-purple-600 hover:bg-purple-700"
+                  disabled={generateMutation.isPending}
+                  onClick={handleStartGeneration}
+                >
+                  <PlayCircleIcon className="mr-2 h-4 w-4" /> 开始生成视频
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -420,6 +448,7 @@ export function VideoTaskBoard() {
                     <TableHead className="w-36">参考图</TableHead>
                     <TableHead>提示词</TableHead>
                     <TableHead className="w-24">状态</TableHead>
+                    <TableHead className="w-24">错误原因</TableHead>
                     <TableHead className="w-20">进度</TableHead>
                     <TableHead className="w-44">生成文件</TableHead>
                   </TableRow>
@@ -427,19 +456,27 @@ export function VideoTaskBoard() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                         正在加载视频任务...
                       </TableCell>
                     </TableRow>
                   ) : !sortedTasks.length ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                        暂无视频任务，请点击右上角的“添加任务”。
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                        {showCreateButton
+                          ? '暂无视频任务，请点击右上角的“添加任务”。'
+                          : '暂无视频任务，请先通过工作流批量上传并生成任务。'}
                       </TableCell>
                     </TableRow>
                   ) : (
                     sortedTasks.map((task) => (
-                      <TableRow key={task.number} className="text-sm">
+                      <TableRow
+                        key={task.number}
+                        className={cn(
+                          'text-sm',
+                          highlightSet.has(task.number) ? 'bg-indigo-50/70' : undefined,
+                        )}
+                      >
                         <TableCell>
                           <Checkbox
                             checked={selected.has(task.number)}
@@ -487,6 +524,18 @@ export function VideoTaskBoard() {
                             {task.status}
                           </Badge>
                         </TableCell>
+                        <TableCell className="max-w-[220px]">
+                          {task.errorMsg ? (
+                            <span
+                              className="block truncate text-xs text-rose-600"
+                              title={task.errorMsg}
+                            >
+                              {task.errorMsg}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             <Progress value={task.status === '成功' ? 100 : task.progress ?? 0} className="h-1.5" />
@@ -518,7 +567,7 @@ export function VideoTaskBoard() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="shadow-sm border border-slate-200">
+        <Card className={cn(isEmbedded ? 'shadow-none border-0' : 'shadow-sm border border-slate-200')}>
           <CardHeader className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
