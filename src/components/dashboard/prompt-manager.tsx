@@ -131,15 +131,24 @@ export function PromptManager() {
     mutationFn: (payload: { mode: 'new' | 'selected' | 'all'; numbers?: string[] }) =>
       api.startImageGeneration(payload),
     onSuccess: (response) => {
-      if (response.success) {
-        if (response.warnings?.length) {
-          toast.warning(response.warnings.join('；'));
+      if (!response.success) {
+        if (response.failed.length) {
+          const sample = response.failed
+            .slice(0, 3)
+            .map((item) => `${item.jobId}: ${item.error?.message ?? '未知错误'}`)
+            .join('；');
+          toast.error(sample || response.message || '提交图片生成任务失败');
+        } else {
+          toast.info(response.message ?? '没有需要生成的提示词');
         }
-        toast.success('已提交图片生成任务');
-        queryClient.invalidateQueries({ queryKey: ['prompts'] });
-      } else {
-        toast.info(response.message ?? '没有需要生成的提示词');
+        return;
       }
+
+      if (response.warnings?.length) {
+        toast.warning(response.warnings.join('；'));
+      }
+      toast.success('已提交图片生成任务');
+      queryClient.invalidateQueries({ queryKey: ['prompts'] });
     },
     onError: (error: Error) => toast.error(error.message || '启动批量出图失败'),
   });

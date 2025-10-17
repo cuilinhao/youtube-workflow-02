@@ -8,6 +8,8 @@ import type {
   ApiSettings,
   VideoSettings,
   ImageReference,
+  ImageResult,
+  BatchImagesResponse,
 } from './types';
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -158,7 +160,15 @@ export const api = {
       method: 'DELETE',
     }),
   startImageGeneration: (payload: { mode: 'new' | 'selected' | 'all'; numbers?: string[] }) =>
-    request<{ success: boolean; message?: string; warnings?: string[] }>('/api/generate/images', {
+    request<{ success: boolean; results: ImageResult[]; failed: ImageResult[]; warnings?: string[]; message?: string }>(
+      '/api/generate/images',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    ),
+  startBatchImageGeneration: (payload: { shots: Array<{ shot_id: string; prompt: string }>; aspectRatio?: string }) =>
+    request<BatchImagesResponse>('/api/images/batch', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),

@@ -313,6 +313,13 @@ export function VideoWorkflow() {
       );
 
       if (!generationResult.success) {
+        if (generationResult.failed.length) {
+          const summary = generationResult.failed
+            .slice(0, 3)
+            .map((item) => `${item.jobId}: ${item.error?.message ?? '未知错误'}`)
+            .join('；');
+          throw new Error(summary || '批量出图任务提交失败');
+        }
         throw new Error(generationResult.message ?? '批量出图任务提交失败');
       }
 
