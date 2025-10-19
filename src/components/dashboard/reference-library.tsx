@@ -48,6 +48,7 @@ export function ReferenceLibrary() {
   const [categoryName, setCategoryName] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
+  const [isUploading, setIsUploading] = useState(false);
 
   const categories = useMemo(() => data?.categoryLinks ?? {}, [data]);
   const categoryEntries = useMemo(() => Object.entries(categories), [categories]);
@@ -88,11 +89,6 @@ export function ReferenceLibrary() {
 
   const uploadImageMutation = useMutation({
     mutationFn: (payload: { file: File; category: string; name: string }) => api.uploadReferenceImage(payload),
-    onSuccess: () => {
-      toast.success('图片已上传');
-      queryClient.invalidateQueries({ queryKey: ['app-data'] });
-    },
-    onError: (error: Error) => toast.error(error.message || '上传图片失败'),
   });
 
   const deleteImageMutation = useMutation({
@@ -117,13 +113,45 @@ export function ReferenceLibrary() {
     }
   };
 
-  const handleUpload = (file: File) => {
+  const handleUpload = async (files: FileList | File[]) => {
     if (!activeCategory) {
       toast.warning('请先选择分类，再上传图片');
       return;
     }
-    const sanitizedName = file.name.replace(/\.[^.]+$/, '');
-    uploadImageMutation.mutate({ file, category: activeCategory, name: sanitizedName });
+    const fileArray = Array.from(files).filter((file) => file && file.name);
+    if (!fileArray.length) {
+      toast.warning('未检测到可上传的图片文件');
+      return;
+    }
+
+    setIsUploading(true);
+
+    const failed: { name: string; message: string }[] = [];
+    let successCount = 0;
+
+    try {
+      for (const file of fileArray) {
+        const sanitizedName = file.name.replace(/\.[^.]+$/, '');
+        try {
+          await uploadImageMutation.mutateAsync({ file, category: activeCategory, name: sanitizedName });
+          successCount += 1;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : '上传图片失败';
+          failed.push({ name: sanitizedName, message });
+        }
+      }
+    } finally {
+      setIsUploading(false);
+    }
+
+    if (successCount > 0) {
+      toast.success(`已上传 ${successCount} 张图片`);
+      queryClient.invalidateQueries({ queryKey: ['app-data'] });
+    }
+
+    failed.forEach(({ name, message }) => {
+      toast.error(`图片 ${name} 上传失败：${message}`);
+    });
   };
 
   const handleDeleteImages = () => {
@@ -192,21 +220,23 @@ export function ReferenceLibrary() {
               }
               fileInputRef.current?.click();
             }}
-            disabled={!activeCategory}
+            disabled={!activeCategory || isUploading}
           >
-            <UploadIcon className="mr-2 h-4 w-4" /> 添加图片
+            <UploadIcon className="mr-2 h-4 w-4" /> {isUploading ? '上传中...' : '添加图片'}
           </Button>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                handleUpload(file);
-                event.target.value = '';
+            onChange={async (event) => {
+              const input = event.target;
+              const { files } = input;
+              if (files?.length) {
+                await handleUpload(files);
               }
+              input.value = '';
             }}
           />
           <Button variant="secondary" size="sm" onClick={handleDeleteImages} disabled={!selectedImages.size}>

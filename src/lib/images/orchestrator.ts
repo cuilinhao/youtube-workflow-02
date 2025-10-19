@@ -25,7 +25,7 @@ const PLATFORM_CONFIGS: Record<string, { url: string; model: string }> = {
     model: 'gemini-2.5-flash-image',
   },
   'KIE.AI': {
-    url: 'https://api.kie.ai/v1/chat/completions',
+    url: 'https://api.kie.ai/api/v1/chat/completions',
     model: 'gemini-2.5-flash-image-preview',
   },
 };
@@ -120,18 +120,65 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
-function parseImageFromContent(content: string): { base64?: string; url?: string } | null {
-  const base64Match = content.match(/!\[[^\]]*\]\((data:image\/[^;]+;base64,[^)]+)\)/);
-  if (base64Match) {
-    return { base64: base64Match[1] };
+function parseImageFromContent(content: unknown): { base64?: string; url?: string } | null {
+  if (typeof content === 'string') {
+    const base64Match = content.match(/!\[[^\]]*\]\((data:image\/[^;]+;base64,[^)]+)\)/);
+    if (base64Match) {
+      return { base64: base64Match[1] };
+    }
+    const downloadMatch = content.match(/\[点击下载\]\(([^)]+)\)/);
+    if (downloadMatch) {
+      return { url: downloadMatch[1] };
+    }
+    const imageMatch = content.match(/!\[[^\]]*\]\((https?:[^)]+)\)/);
+    if (imageMatch) {
+      return { url: imageMatch[1] };
+    }
+    return null;
   }
-  const downloadMatch = content.match(/\[点击下载\]\(([^)]+)\)/);
-  if (downloadMatch) {
-    return { url: downloadMatch[1] };
+
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      const parsed = parseImageFromContent(part);
+      if (parsed) {
+        return parsed;
+      }
+    }
+    return null;
   }
-  const imageMatch = content.match(/!\[[^\]]*\]\((https?:[^)]+)\)/);
-  if (imageMatch) {
-    return { url: imageMatch[1] };
+
+  if (content && typeof content === 'object') {
+    const typed = content as {
+      type?: string;
+      text?: string;
+      image_base64?: string;
+      image_url?: { url?: string } | string;
+      b64_json?: string;
+      url?: string;
+    };
+    if (typed.type === 'output_image' || typed.type === 'image') {
+      if (typed.image_base64) {
+        const prefix = typed.image_base64.startsWith('data:') ? '' : 'data:image/png;base64,';
+        return { base64: `${prefix}${typed.image_base64}` };
+      }
+      if (typed.b64_json) {
+        return { base64: `data:image/png;base64,${typed.b64_json}` };
+      }
+      if (typeof typed.image_url === 'string') {
+        return { url: typed.image_url };
+      }
+      if (typed.image_url && typeof typed.image_url.url === 'string') {
+        return { url: typed.image_url.url };
+      }
+      if (typed.url) {
+        return { url: typed.url };
+      }
+    }
+    if (typed.type === 'text' || typed.type === 'input_text') {
+      if (typed.text) {
+        return parseImageFromContent(typed.text);
+      }
+    }
   }
   return null;
 }
@@ -185,7 +232,10 @@ async function ensureEndpointReachable(url: string, apiKey: string): Promise<voi
   }
 }
 
-async function resolveApiConfig(data: AppData): Promise<{ config: ApiConfig; diagnostics: string[] }> {
+async function resolveApiConfig(
+  data: AppData,
+  excludeKeys: Set<string> = new Set(),
+): Promise<{ config: ApiConfig; diagnostics: string[]; keyName: string }> {
   const { apiSettings, keyLibrary } = data;
   const entries = Object.values(keyLibrary);
 
@@ -200,6 +250,9 @@ async function resolveApiConfig(data: AppData): Promise<{ config: ApiConfig; dia
   const errors: string[] = [];
 
   for (const entry of ordered) {
+    if (excludeKeys.has(entry.name)) {
+      continue;
+    }
     const platform = entry.platform?.trim() || apiSettings.apiPlatform || '云雾';
     const config = PLATFORM_CONFIGS[platform] ?? PLATFORM_CONFIGS['API易'];
     if (!config) {
@@ -230,6 +283,7 @@ async function resolveApiConfig(data: AppData): Promise<{ config: ApiConfig; dia
           apiKey: entry.apiKey,
           platform,
         },
+        keyName: entry.name,
         diagnostics,
       };
     } catch (error) {
@@ -410,15 +464,27 @@ async function processJob(job: ImageJob, context: OrchestratorContext): Promise<
       }
 
       const data = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
+        code?: number;
+        msg?: string;
+        error?: { message?: string };
+        choices?: Array<{ message?: { content?: unknown } }>;
+        data?: unknown;
       };
 
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) {
+      if (typeof data?.code === 'number' && data.code !== 0) {
+        throw new Error(data.msg ? `接口错误(${data.code}): ${data.msg}` : `接口错误代码: ${data.code}`);
+      }
+      const providerMessage = data?.error?.message;
+      if (providerMessage) {
+        throw new Error(providerMessage);
+      }
+
+      const rawContent = data.choices?.[0]?.message?.content;
+      if (!rawContent) {
         throw new Error('接口返回内容为空');
       }
 
-      const result = parseImageFromContent(content);
+      const result = parseImageFromContent(rawContent);
       if (!result) {
         throw new Error('未在响应中找到图片数据');
       }
@@ -519,34 +585,94 @@ export async function orchestrateGenerateImages(
     return { results: [], failed: [] };
   }
 
-  const appData = await readAppData();
-  const { config: apiConfig, diagnostics } = await resolveApiConfig(appData);
+  const attemptedKeys = new Set<string>();
+  const diagnostics: string[] = [];
+  const resultsByJob = new Map<string, ImageResult>();
+  let pendingJobs = [...jobs];
 
-  const concurrency = Math.max(1, options?.concurrency ?? appData.apiSettings.threadCount ?? 1);
-  const retryCount = options?.retryCount ?? appData.apiSettings.retryCount ?? 0;
-  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const saveDir = resolveSaveDir(appData.apiSettings.savePath, path.join('public', 'generated_images'));
-  const imageMap = collectImageMap(appData.categoryLinks);
-  const defaultStyle =
-    appData.customStyleContent?.trim()
-      || (appData.currentStyle && appData.styleLibrary[appData.currentStyle]?.content?.trim())
-      || '';
+  while (pendingJobs.length) {
+    const appData = await readAppData();
+    let configResult: { config: ApiConfig; diagnostics: string[]; keyName: string };
 
-  const context: OrchestratorContext = {
-    apiConfig,
-    diagnostics,
-    imageMap,
-    defaultStyle,
-    appData,
-    saveDir,
-    concurrency,
-    retryCount,
-    timeoutMs,
+    try {
+      configResult = await resolveApiConfig(appData, attemptedKeys);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '无法确定可用的 API 配置';
+      pendingJobs.forEach((job) => {
+        resultsByJob.set(job.id, {
+          jobId: job.id,
+          ok: false,
+          error: { code: 'CONFIG_ERROR', message },
+        });
+      });
+      break;
+    }
+
+    const { config: apiConfig, diagnostics: diag, keyName } = configResult;
+    if (diag.length) {
+      diagnostics.push(...diag);
+    }
+    attemptedKeys.add(keyName);
+
+    const concurrency = Math.max(1, options?.concurrency ?? appData.apiSettings.threadCount ?? 1);
+    const retryCount = options?.retryCount ?? appData.apiSettings.retryCount ?? 0;
+    const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const saveDir = resolveSaveDir(appData.apiSettings.savePath, path.join('public', 'generated_images'));
+    const imageMap = collectImageMap(appData.categoryLinks);
+    const defaultStyle =
+      appData.customStyleContent?.trim()
+        || (appData.currentStyle && appData.styleLibrary[appData.currentStyle]?.content?.trim())
+        || '';
+
+    const context: OrchestratorContext = {
+      apiConfig,
+      diagnostics,
+      imageMap,
+      defaultStyle,
+      appData,
+      saveDir,
+      concurrency,
+      retryCount,
+      timeoutMs,
+    };
+
+    const limit = pLimit(concurrency);
+    const iterationResults = await Promise.all(pendingJobs.map((job) => limit(() => processJob(job, context))));
+
+    iterationResults.forEach((result) => {
+      resultsByJob.set(result.jobId, result);
+    });
+
+    const failedResults = iterationResults.filter((result) => !result.ok);
+    if (!failedResults.length) {
+      break;
+    }
+
+    const remainingKeyCount = Object.keys(appData.keyLibrary).length - attemptedKeys.size;
+    if (remainingKeyCount <= 0) {
+      break;
+    }
+
+    const failedJobIds = new Set(failedResults.map((result) => result.jobId));
+    pendingJobs = pendingJobs.filter((job) => failedJobIds.has(job.id));
+  }
+
+  const orderedResults = jobs.map((job) => {
+    const result = resultsByJob.get(job.id);
+    if (result) {
+      return result;
+    }
+    return {
+      jobId: job.id,
+      ok: false,
+      error: { code: 'UNKNOWN', message: '任务未完成' },
+    };
+  });
+
+  const failed = orderedResults.filter((result) => !result.ok);
+  return {
+    results: orderedResults,
+    failed,
+    diagnostics: diagnostics.length ? diagnostics : undefined,
   };
-
-  const limit = pLimit(concurrency);
-  const results = await Promise.all(jobs.map((job) => limit(() => processJob(job, context))));
-  const failed = results.filter((result) => !result.ok);
-
-  return { results, failed, diagnostics: diagnostics.length ? diagnostics : undefined };
 }

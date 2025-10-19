@@ -97,7 +97,7 @@ async function processPrompt(options: {
 | 云雾 | `https://yunwu.ai/v1/chat/completions` | `gemini-2.5-flash-image-preview` | 支持多模态输入 |
 | API易 | `https://vip.apiyi.com/v1/chat/completions` | `gemini-2.5-flash-image-preview` | 高可用性 |
 | apicore | `https://api.apicore.ai/v1/chat/completions` | `gemini-2.5-flash-image` | 稳定可靠 |
-| KIE.AI | `https://api.kie.ai/v1/chat/completions` | `gemini-2.5-flash-image-preview` | 专业服务 |
+| KIE.AI | `https://api.kie.ai/api/v1/chat/completions` | `gemini-2.5-flash-image-preview` | 专业服务 |
 
 ## 配置系统
 
