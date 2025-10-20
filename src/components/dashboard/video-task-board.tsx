@@ -333,7 +333,7 @@ export function VideoTaskBoard({
     }
   };
 
-  const handleOpenOutputLocation = (task: VideoTask) => {
+  const handleOpenOutputLocation = async (task: VideoTask) => {
     const location = task.localPath ?? task.remoteUrl;
     if (!location) {
       toast.info('该任务尚未生成视频文件');
@@ -345,16 +345,26 @@ export function VideoTaskBoard({
       return;
     }
 
-    const directory = getDirectoryPath(location);
-    if (directory) {
-      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      const result = await api.openFolder(location);
+      if (!result.success) {
+        throw new Error(result.message || '打开文件夹失败');
+      }
+
+      if (result.directory && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(result.directory).catch(() => {
+          /* clipboard unavailable */
+        });
+      }
+      toast.success(`已打开文件所在文件夹${result.directory ? `：${result.directory}` : ''}`);
+    } catch (error) {
+      const directory = getDirectoryPath(location);
+      if (directory && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(directory).catch(() => {
           /* clipboard unavailable */
         });
       }
-      toast.info(`视频文件位于：${directory}`);
-    } else {
-      toast.info(location);
+      toast.error((error as Error).message || '打开文件夹失败');
     }
   };
 

@@ -177,6 +177,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ numbers }),
     }),
+  openFolder: (pathToOpen: string) =>
+    request<{ success: boolean; directory?: string; message?: string }>('/api/system/open-folder', {
+      method: 'POST',
+      body: JSON.stringify({ path: pathToOpen }),
+    }),
 };
 
 export type { PromptEntry, PromptStatus, StyleEntry, KeyEntry, VideoTask, ApiSettings, VideoSettings, ImageReference };
