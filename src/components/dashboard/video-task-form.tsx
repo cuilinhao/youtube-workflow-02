@@ -371,9 +371,17 @@ export function VideoTaskForm({
       return;
     }
 
+    const resolveRelativePath = (file: File) =>
+      ((file as File & { webkitRelativePath?: string }).webkitRelativePath ?? file.name).toLowerCase();
+
+    // Use natural sort on the original sequence so table order matches upload order.
+    const sortedImageFiles = [...imageFiles].sort((a, b) =>
+      resolveRelativePath(a).localeCompare(resolveRelativePath(b), undefined, { numeric: true, sensitivity: 'base' }),
+    );
+
     const batchPrefix = `uploads/video-references/${Date.now()}`;
     const batchId = Date.now();
-    const initialStates = imageFiles.map((file, index) => ({
+    const initialStates = sortedImageFiles.map((file, index) => ({
       id: `${batchId}-${index}`,
       name: file.name,
       progress: 0,
@@ -384,8 +392,8 @@ export function VideoTaskForm({
 
     const collectedUrls: string[] = [];
 
-    for (let index = 0; index < imageFiles.length; index += 1) {
-      const file = imageFiles[index];
+    for (let index = 0; index < sortedImageFiles.length; index += 1) {
+      const file = sortedImageFiles[index];
       const itemId = initialStates[index].id;
       setImageUploads((prev) =>
         prev.map((item) => (item.id === itemId ? { ...item, status: 'uploading', progress: 0 } : item)),
