@@ -30,19 +30,19 @@ export interface VideoTask {
   enableTranslation: boolean;
   status: PromptStatus | '提交中';
   progress: number;
-  localPath?: string;
-  remoteUrl?: string;
-  errorMsg?: string;
+  localPath?: string | null;
+  remoteUrl?: string | null;
+  errorMsg?: string | null;
   createdAt: string;
   updatedAt?: string;
   workflow?: 'A' | 'B';
-  providerRequestId?: string;
-  fingerprint?: string;
+  providerRequestId?: string | null;
+  fingerprint?: string | null;
   attempts?: number;
   maxAttempts?: number;
-  actualFilename?: string;
-  startedAt?: string;
-  finishedAt?: string;
+  actualFilename?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
 }
 
 export interface StyleEntry {

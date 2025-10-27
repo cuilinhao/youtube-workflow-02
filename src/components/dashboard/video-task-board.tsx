@@ -5,6 +5,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
@@ -18,9 +26,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2Icon, FilmIcon, PlayCircleIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Trash2Icon, FilmIcon, PlayCircleIcon, CropIcon } from 'lucide-react';
 import { api, VideoTask } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { VIDEO_ASPECT_RATIO_OPTIONS } from '@/constants/video';
 import { VideoTaskForm, VideoTaskFormSubmitPayload, createEmptyVideoTaskDraft } from './video-task-form';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -38,6 +48,12 @@ interface VideoTaskBoardProps {
   showGenerateButton?: boolean;
   highlightNumbers?: string[];
   className?: string;
+}
+
+interface UpdateAspectRatioVariables {
+  numbers: string[];
+  aspectRatio: string;
+  regenerate?: boolean;
 }
 
 function getFileName(raw?: string | null) {
@@ -106,6 +122,8 @@ export function VideoTaskBoard({
   >(null);
   const promptCancelRef = useRef(false);
   const [isSelectingOutput, setIsSelectingOutput] = useState(false);
+  const [isAspectDialogOpen, setIsAspectDialogOpen] = useState(false);
+  const [pendingAspectRatio, setPendingAspectRatio] = useState('');
 
   const initialFormValues = useMemo(
     () =>
@@ -201,6 +219,39 @@ export function VideoTaskBoard({
     onError: (error: Error) => toast.error(error.message || '启动图生视频失败'),
   });
 
+  const updateAspectRatioMutation = useMutation({
+    mutationFn: async ({ numbers, aspectRatio }: UpdateAspectRatioVariables) => {
+      if (!numbers.length) return [];
+      const resetPayload: Partial<VideoTask> = {
+        aspectRatio,
+        status: '等待中',
+        progress: 0,
+        remoteUrl: null,
+        localPath: null,
+        errorMsg: null,
+        providerRequestId: null,
+        actualFilename: null,
+        fingerprint: null,
+        finishedAt: null,
+        startedAt: null,
+        attempts: 0,
+      };
+      return Promise.all(numbers.map((number) => api.updateVideoTask(number, resetPayload)));
+    },
+    onSuccess: async (_results, variables) => {
+      const count = variables.numbers.length;
+      toast.success(`已更新 ${count} 个任务的画幅比例为 ${variables.aspectRatio}`);
+      setIsAspectDialogOpen(false);
+      setPendingAspectRatio('');
+      await queryClient.invalidateQueries({ queryKey: ['video-tasks'] });
+      await queryClient.refetchQueries({ queryKey: ['video-tasks'], type: 'active' });
+      if (variables.regenerate && count) {
+        generateMutation.mutate(variables.numbers);
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || '更新画幅比例失败'),
+  });
+
   const updatePromptMutation = useMutation({
     mutationFn: ({ number, prompt }: { number: string; prompt: string }) =>
       api.updateVideoTask(number, { prompt }),
@@ -227,6 +278,15 @@ export function VideoTaskBoard({
       [...videoTasks].sort((a, b) => Number.parseInt(a.number, 10) - Number.parseInt(b.number, 10)),
     [videoTasks],
   );
+  const selectedTasks = useMemo(
+    () => sortedTasks.filter((task) => selected.has(task.number)),
+    [sortedTasks, selected],
+  );
+  const hasMixedSelectedAspectRatios = useMemo(() => {
+    if (selectedTasks.length <= 1) return false;
+    const unique = new Set(selectedTasks.map((task) => task.aspectRatio));
+    return unique.size > 1;
+  }, [selectedTasks]);
 
   const overallProgress = useMemo(() => {
     if (!videoTasks.length) return 0;
@@ -256,6 +316,45 @@ export function VideoTaskBoard({
 
   const handleStartGeneration = () => {
     generateMutation.mutate(selected.size ? Array.from(selected) : undefined);
+  };
+
+  const handleOpenAspectDialog = () => {
+    if (!selectedTasks.length) {
+      toast.warning('请先选择要修改的任务');
+      return;
+    }
+    if (updateAspectRatioMutation.isPending) return;
+    const unique = new Set(selectedTasks.map((task) => task.aspectRatio).filter(Boolean));
+    const fallbackRatio = settings?.videoSettings.defaultAspectRatio ?? '9:16';
+    const nextRatio = unique.size === 1 ? selectedTasks[0]?.aspectRatio ?? fallbackRatio : fallbackRatio;
+    setPendingAspectRatio(nextRatio);
+    setIsAspectDialogOpen(true);
+  };
+
+  const handleAspectDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      if (updateAspectRatioMutation.isPending) return;
+      setIsAspectDialogOpen(false);
+      setPendingAspectRatio('');
+    } else {
+      setIsAspectDialogOpen(true);
+    }
+  };
+
+  const handleAspectRatioSubmit = (action: 'update' | 'update-and-regenerate') => {
+    if (!selectedTasks.length) {
+      toast.warning('请先选择要修改的任务');
+      return;
+    }
+    if (!pendingAspectRatio) {
+      toast.warning('请选择画幅比例');
+      return;
+    }
+    updateAspectRatioMutation.mutate({
+      numbers: selectedTasks.map((task) => task.number),
+      aspectRatio: pendingAspectRatio,
+      regenerate: action === 'update-and-regenerate',
+    });
   };
 
   const startEditingPrompt = (task: VideoTask) => {
@@ -423,6 +522,14 @@ export function VideoTaskBoard({
               <Button
                 variant="outline"
                 size="sm"
+                onClick={handleOpenAspectDialog}
+                disabled={!selectedTasks.length || updateAspectRatioMutation.isPending}
+              >
+                <CropIcon className="mr-2 h-4 w-4" /> 修改画幅
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleOutputFolderButtonClick}
                 disabled={updateSavePathMutation.isPending || isSelectingOutput}
               >
@@ -456,6 +563,7 @@ export function VideoTaskBoard({
                     <TableHead className="w-12">选择</TableHead>
                     <TableHead className="w-16">编号</TableHead>
                     <TableHead className="w-36">参考图</TableHead>
+                    <TableHead className="w-24">画幅</TableHead>
                     <TableHead>提示词</TableHead>
                     <TableHead className="w-24">状态</TableHead>
                     <TableHead className="w-24">错误原因</TableHead>
@@ -466,13 +574,13 @@ export function VideoTaskBoard({
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                         正在加载视频任务...
                       </TableCell>
                     </TableRow>
                   ) : !sortedTasks.length ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                         {showCreateButton
                           ? '暂无视频任务，请点击右上角的“添加任务”。'
                           : '暂无视频任务，请先通过工作流批量上传并生成任务。'}
@@ -505,6 +613,9 @@ export function VideoTaskBoard({
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs font-medium text-slate-600">{task.aspectRatio || '—'}</span>
                         </TableCell>
                         <TableCell className="max-w-[280px]">
                           {editingPrompt?.number === task.number ? (
@@ -607,6 +718,64 @@ export function VideoTaskBoard({
           </CardContent>
         </Card>
       )}
+      <Dialog open={isAspectDialogOpen} onOpenChange={handleAspectDialogOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>批量修改画幅比例</DialogTitle>
+            <DialogDescription>
+              将对已选择的 {selectedTasks.length} 个任务应用新的画幅比例，并清空对应生成结果。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Select value={pendingAspectRatio} onValueChange={setPendingAspectRatio}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择画幅比例" />
+                </SelectTrigger>
+                <SelectContent>
+                  {VIDEO_ASPECT_RATIO_OPTIONS.map((ratio) => (
+                    <SelectItem key={ratio} value={ratio}>
+                      {ratio}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasMixedSelectedAspectRatios ? (
+                <p className="text-xs text-amber-600">当前所选任务画幅不一致，默认使用设置中心中的画幅。</p>
+              ) : null}
+              <p className="text-xs text-slate-500">
+                更新画幅后，任务会重置为等待中状态，同时移除本地与远程的生成文件记录。
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => handleAspectDialogOpenChange(false)}
+              disabled={updateAspectRatioMutation.isPending}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleAspectRatioSubmit('update')}
+              disabled={updateAspectRatioMutation.isPending}
+            >
+              更新画幅
+            </Button>
+            <Button
+              type="button"
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={() => handleAspectRatioSubmit('update-and-regenerate')}
+              disabled={updateAspectRatioMutation.isPending}
+            >
+              更新并重新生成
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

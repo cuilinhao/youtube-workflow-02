@@ -18,8 +18,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { cacheImageFiles, clearCachedImages, type CachedImageMetadata } from '@/lib/image-cache';
 import { cn } from '@/lib/utils';
 import { FileSpreadsheet, FolderUpIcon, ImagePlus, Trash2Icon } from 'lucide-react';
+import { VIDEO_ASPECT_RATIO_OPTIONS } from '@/constants/video';
 
 export interface VideoTaskFormRow {
   id: string;
@@ -67,13 +69,13 @@ interface VideoTaskFormProps {
 interface ImageUploadItem {
   id: string;
   name: string;
+  size: number;
   progress: number;
   status: 'pending' | 'uploading' | 'success' | 'error';
   url?: string;
   error?: string;
+  cacheKey?: string;
 }
-
-const ASPECT_RATIO_OPTIONS = ['16:9', '9:16', '1:1', '4:3'];
 
 function generateRowId() {
   return `row-${Math.random().toString(36).slice(2, 10)}`;
@@ -228,9 +230,54 @@ export function VideoTaskForm({
     setImageUploads([]);
     setIsUploadingImages(false);
     setBulkInput('');
+    void clearCachedImages();
   }, [initialValues]);
 
   const rows = useMemo(() => values.rows, [values.rows]);
+
+  const uploadSummary = useMemo(() => {
+    if (!imageUploads.length) {
+      return { totalBytes: 0, uploadedBytes: 0, progress: 0, successCount: 0, errorCount: 0 };
+    }
+
+    let totalBytes = 0;
+    let uploadedBytes = 0;
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const item of imageUploads) {
+      const size = item.size ?? 0;
+      totalBytes += size;
+      uploadedBytes += size * (item.progress / 100);
+      if (item.status === 'success') {
+        successCount += 1;
+      } else if (item.status === 'error') {
+        errorCount += 1;
+      }
+    }
+
+    const progress =
+      totalBytes > 0
+        ? Math.min(100, Math.round((uploadedBytes / totalBytes) * 100))
+        : Math.round(imageUploads.reduce((sum, item) => sum + item.progress, 0) / imageUploads.length);
+
+    return { totalBytes, uploadedBytes, progress, successCount, errorCount };
+  }, [imageUploads]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handlePageHide = () => {
+      void clearCachedImages();
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      void clearCachedImages();
+    };
+  }, []);
 
   const updateRow = (id: string, key: 'imageUrl' | 'prompt', value: string) => {
     setValues((prev) => ({
@@ -379,14 +426,37 @@ export function VideoTaskForm({
       resolveRelativePath(a).localeCompare(resolveRelativePath(b), undefined, { numeric: true, sensitivity: 'base' }),
     );
 
-    const batchPrefix = `uploads/video-references/${Date.now()}`;
-    const batchId = Date.now();
-    const initialStates = sortedImageFiles.map((file, index) => ({
-      id: `${batchId}-${index}`,
-      name: file.name,
-      progress: 0,
-      status: 'pending' as const,
-    }));
+    const batchTimestamp = Date.now();
+    const batchPrefix = `uploads/video-references/${batchTimestamp}`;
+    const batchId = batchTimestamp;
+    const cacheBatchId = `batch-${batchTimestamp}`;
+
+    let cachedMetadata: CachedImageMetadata[] = [];
+    try {
+      await clearCachedImages();
+      cachedMetadata = await cacheImageFiles(sortedImageFiles, cacheBatchId);
+    } catch (error) {
+      console.error('[VideoTaskForm] 缓存图片失败', error);
+    }
+
+    const metadataMap = new Map<string, CachedImageMetadata>();
+    cachedMetadata.forEach((meta) => {
+      const signature = `${meta.name}|${meta.size}|${meta.lastModified}`;
+      metadataMap.set(signature, meta);
+    });
+
+    const initialStates = sortedImageFiles.map((file, index) => {
+      const signature = `${file.name}|${file.size}|${file.lastModified}`;
+      const matchedMetadata = metadataMap.get(signature);
+      return {
+        id: `${batchId}-${index}`,
+        name: file.name,
+        size: file.size,
+        progress: 0,
+        status: 'pending' as const,
+        cacheKey: matchedMetadata?.cacheKey,
+      };
+    });
     setImageUploads(initialStates);
     setIsUploadingImages(true);
 
@@ -705,6 +775,16 @@ export function VideoTaskForm({
           {imageUploads.length > 0 && (
             <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-medium text-slate-600">上传进度</p>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-600">
+                  <span>总进度</span>
+                  <span className="text-slate-500">
+                    完成 {uploadSummary.successCount}/{imageUploads.length}
+                    {uploadSummary.errorCount ? ` · 失败 ${uploadSummary.errorCount}` : ''} · {uploadSummary.progress}%
+                  </span>
+                </div>
+                <Progress value={uploadSummary.progress} className="h-2" />
+              </div>
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {imageUploads.map((item) => (
                   <div key={item.id} className="space-y-2">
@@ -756,7 +836,7 @@ export function VideoTaskForm({
                   <SelectValue placeholder="选择画幅" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ASPECT_RATIO_OPTIONS.map((ratio) => (
+                  {VIDEO_ASPECT_RATIO_OPTIONS.map((ratio) => (
                     <SelectItem key={ratio} value={ratio}>
                       {ratio}
                     </SelectItem>

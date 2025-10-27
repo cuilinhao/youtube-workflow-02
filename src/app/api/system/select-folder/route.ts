@@ -39,7 +39,7 @@ if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
       const { stdout } = await execFileAsync('zenity', ['--file-selection', '--directory', '--title=选择存放图生视频的文件夹']);
       const result = stdout.trim();
       return result ? result.replace(/\/+$/, '') : null;
-    } catch (error) {
+    } catch {
       throw new Error('当前环境不支持文件夹选择，请手动在设置中心填写保存路径');
     }
   }
