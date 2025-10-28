@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -212,6 +212,7 @@ export function VideoTaskForm({
   const folderInputRef = useRef<HTMLInputElement | null>(null);
   const singleImageInputRef = useRef<HTMLInputElement | null>(null);
   const csvInputRef = useRef<HTMLInputElement | null>(null);
+  const dragCounterRef = useRef(0);
   const [values, setValues] = useState<VideoTaskFormValues>(() => ({
     ...initialValues,
     rows: initialValues.rows.length ? initialValues.rows.map(createVideoTaskFormRow) : [createVideoTaskFormRow()],
@@ -221,6 +222,7 @@ export function VideoTaskForm({
   const [bulkInput, setBulkInput] = useState('');
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [promptBulkInput, setPromptBulkInput] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     if (folderInputRef.current) {
@@ -648,6 +650,65 @@ export function VideoTaskForm({
     onSubmit(payload);
   };
 
+  const dragEventHasFiles = (event: DragEvent<HTMLElement>) =>
+    Array.from(event.dataTransfer?.types ?? []).includes('Files');
+
+  const handleDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    if (disableUpload || isUploadingImages) return;
+    if (!dragEventHasFiles(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragCounterRef.current += 1;
+    setIsDragOver(true);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (disableUpload || isUploadingImages) return;
+    if (!dragEventHasFiles(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'copy';
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (!dragEventHasFiles(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (disableUpload || isUploadingImages) return;
+    if (!dragEventHasFiles(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDragOver(false);
+
+    const droppedFiles = Array.from(event.dataTransfer?.files ?? []);
+
+    if (droppedFiles.length) {
+      void uploadImagesFromFiles(droppedFiles);
+      event.dataTransfer?.clearData();
+      return;
+    }
+
+    const textPayload = event.dataTransfer?.getData('text/plain');
+    if (textPayload) {
+      const parsed = parseBulkInput(textPayload);
+      if (parsed.length) {
+        addRowsFromUrls(parsed);
+        toast.success(`已添加 ${parsed.length} 条路径`);
+      } else {
+        toast.error('未检测到有效的图片文件或路径');
+      }
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
@@ -744,8 +805,24 @@ export function VideoTaskForm({
               一行对应一张参考图与提示词，支持本地路径或在线 URL。
             </p>
 
-            <div className="rounded-md border border-slate-200">
-              <Table>
+            <div
+              className={cn(
+                'relative rounded-md border border-slate-200 transition-colors',
+                (disableUpload || isUploadingImages) && 'opacity-70',
+                isDragOver && 'border-dashed border-purple-500 bg-purple-50/70',
+              )}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {isDragOver ? (
+                <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-md bg-purple-50/80 text-sm font-medium text-purple-700">
+                  <ImagePlus className="h-6 w-6" />
+                  拖拽的图片松手即可上传（支持多张）
+                </div>
+              ) : null}
+              <Table className={cn('relative transition-opacity', isDragOver && 'opacity-40')}>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
                     <TableHead className="w-16 text-center">序号</TableHead>
