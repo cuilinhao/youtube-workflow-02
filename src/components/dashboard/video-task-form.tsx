@@ -4,6 +4,7 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -20,7 +21,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { cacheImageFiles, clearCachedImages, type CachedImageMetadata } from '@/lib/image-cache';
 import { cn } from '@/lib/utils';
-import { FileSpreadsheet, FolderUpIcon, ImagePlus, Trash2Icon } from 'lucide-react';
+import { ClipboardList, FileSpreadsheet, FolderUpIcon, ImagePlus, Trash2Icon } from 'lucide-react';
 import { VIDEO_ASPECT_RATIO_OPTIONS } from '@/constants/video';
 
 export interface VideoTaskFormRow {
@@ -127,6 +128,10 @@ function parseBulkInput(raw: string) {
     .filter(Boolean);
 }
 
+function parsePromptBulkInput(raw: string) {
+  return parseBulkInput(raw);
+}
+
 function sanitizeSegment(segment: string) {
   return segment
     .toLowerCase()
@@ -214,6 +219,8 @@ export function VideoTaskForm({
   const [imageUploads, setImageUploads] = useState<ImageUploadItem[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [bulkInput, setBulkInput] = useState('');
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [promptBulkInput, setPromptBulkInput] = useState('');
 
   useEffect(() => {
     if (folderInputRef.current) {
@@ -578,6 +585,19 @@ export function VideoTaskForm({
     toast.success(`已添加 ${parsed.length} 条路径`);
   };
 
+  const handleBulkPromptApply = () => {
+    const prompts = parsePromptBulkInput(promptBulkInput);
+    if (!prompts.length) {
+      toast.info('请输入至少一个提示词');
+      return;
+    }
+
+    applyPromptsToRows(prompts);
+    setPromptBulkInput('');
+    setPromptDialogOpen(false);
+    toast.success(`已添加 ${prompts.length} 条提示词`);
+  };
+
   const handleSubmit = () => {
     const trimmedRows = rows
       .map((row) => ({
@@ -630,6 +650,28 @@ export function VideoTaskForm({
 
   return (
     <div className="flex h-full flex-col">
+      <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>粘贴提示词</DialogTitle>
+            <DialogDescription>每行一个提示词，将按照顺序填充到对应的任务行。</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={promptBulkInput}
+            onChange={(event) => setPromptBulkInput(event.target.value)}
+            placeholder={`请粘贴提示词，每行一个。\n例如：\n女孩开心地笑了\n男孩在公园里跑步\n夕阳下的海滩风景`}
+            rows={8}
+          />
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setPromptBulkInput('')}>
+              清空
+            </Button>
+            <Button type="button" onClick={handleBulkPromptApply}>
+              粘贴提示词
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <input
         ref={folderInputRef}
         type="file"
@@ -687,6 +729,14 @@ export function VideoTaskForm({
                   disabled={disableUpload}
                 >
                   <FileSpreadsheet className="mr-2 h-4 w-4" /> 批量添加图生视频 CSV
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPromptDialogOpen(true)}
+                >
+                  <ClipboardList className="mr-2 h-4 w-4" /> 粘贴提示词
                 </Button>
               </div>
             </div>

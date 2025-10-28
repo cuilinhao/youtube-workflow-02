@@ -27,7 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2Icon, FilmIcon, PlayCircleIcon, CropIcon } from 'lucide-react';
+import { Trash2Icon, FilmIcon, PlayCircleIcon, CropIcon, RotateCcwIcon } from 'lucide-react';
 import { api, VideoTask } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { VIDEO_ASPECT_RATIO_OPTIONS } from '@/constants/video';
@@ -252,6 +252,36 @@ export function VideoTaskBoard({
     onError: (error: Error) => toast.error(error.message || '更新画幅比例失败'),
   });
 
+  const resetTasksMutation = useMutation({
+    mutationFn: async (tasks: VideoTask[]) => {
+      if (!tasks.length) return [];
+      const resetPayload: Partial<VideoTask> = {
+        status: '等待中',
+        progress: 0,
+        remoteUrl: null,
+        localPath: null,
+        errorMsg: null,
+        providerRequestId: null,
+        actualFilename: null,
+        fingerprint: null,
+        finishedAt: null,
+        startedAt: null,
+        attempts: 0,
+      };
+      return Promise.all(tasks.map((task) => api.updateVideoTask(task.number, resetPayload)));
+    },
+    onSuccess: async (_results, tasks) => {
+      const numbers = tasks.map((task) => task.number);
+      toast.success(`已重置 ${numbers.length} 个任务，准备重新生成`);
+      await queryClient.invalidateQueries({ queryKey: ['video-tasks'] });
+      await queryClient.refetchQueries({ queryKey: ['video-tasks'], type: 'active' });
+      if (numbers.length) {
+        generateMutation.mutate(numbers);
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || '重置任务失败'),
+  });
+
   const updatePromptMutation = useMutation({
     mutationFn: ({ number, prompt }: { number: string; prompt: string }) =>
       api.updateVideoTask(number, { prompt }),
@@ -316,6 +346,17 @@ export function VideoTaskBoard({
 
   const handleStartGeneration = () => {
     generateMutation.mutate(selected.size ? Array.from(selected) : undefined);
+  };
+
+  const handleRegenerateSelected = () => {
+    if (!selectedTasks.length) {
+      toast.warning('请先选择要重新生成的任务');
+      return;
+    }
+    if (resetTasksMutation.isPending) {
+      return;
+    }
+    resetTasksMutation.mutate(selectedTasks);
   };
 
   const handleOpenAspectDialog = () => {
@@ -507,7 +548,7 @@ export function VideoTaskBoard({
                 variant="secondary"
                 size="sm"
                 onClick={handleDeleteSelected}
-                disabled={!selected.size}
+                disabled={!selected.size || resetTasksMutation.isPending}
               >
                 <Trash2Icon className="mr-2 h-4 w-4" /> 删除选中
               </Button>
@@ -523,9 +564,17 @@ export function VideoTaskBoard({
                 variant="outline"
                 size="sm"
                 onClick={handleOpenAspectDialog}
-                disabled={!selectedTasks.length || updateAspectRatioMutation.isPending}
+                disabled={!selectedTasks.length || updateAspectRatioMutation.isPending || resetTasksMutation.isPending}
               >
                 <CropIcon className="mr-2 h-4 w-4" /> 修改画幅
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerateSelected}
+                disabled={!selectedTasks.length || resetTasksMutation.isPending}
+              >
+                <RotateCcwIcon className="mr-2 h-4 w-4" /> 重新生成选中
               </Button>
               <Button
                 variant="outline"
@@ -539,7 +588,7 @@ export function VideoTaskBoard({
                 <Button
                   size="sm"
                   className="ml-auto bg-purple-600 hover:bg-purple-700"
-                  disabled={generateMutation.isPending}
+                  disabled={generateMutation.isPending || resetTasksMutation.isPending}
                   onClick={handleStartGeneration}
                 >
                   <PlayCircleIcon className="mr-2 h-4 w-4" /> 开始生成视频
