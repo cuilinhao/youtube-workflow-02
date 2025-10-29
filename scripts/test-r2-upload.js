@@ -25,7 +25,6 @@ async function main() {
   const client = new S3Client({
     region: 'auto',
     endpoint,
-    forcePathStyle: true,
     credentials: {
       accessKeyId,
       secretAccessKey,

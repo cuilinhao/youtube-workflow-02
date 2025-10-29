@@ -7,16 +7,17 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
   const startedAt = new Date();
   try {
-    const body = (await request.json().catch(() => ({}))) as { numbers?: string[] };
+    const body = (await request.json().catch(() => ({}))) as { numbers?: string[]; provider?: string };
     console.log('\n[视频生成API] ===============================================================');
     console.log('[视频生成API] 收到请求', {
       startedAt: startedAt.toISOString(),
       method: request.method,
       numbers: body.numbers,
+      provider: body.provider,
       userAgent: request.headers.get('user-agent') ?? 'unknown',
       referer: request.headers.get('referer') ?? 'unknown',
     });
-    const result = await generateVideos({ numbers: body.numbers });
+    const result = await generateVideos({ numbers: body.numbers, provider: body.provider });
     console.log('[视频生成API] 响应结果', {
       durationMs: Date.now() - startedAt.getTime(),
       result,

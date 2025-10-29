@@ -1,4 +1,5 @@
 import { readAppData, updateAppData } from '@/lib/data-store';
+import type { AppData } from '@/lib/types';
 
 export type KeyPoolEntry = {
   name: string;
@@ -7,12 +8,21 @@ export type KeyPoolEntry = {
   lastUsed?: string;
 };
 
+type KeyPoolOptions = {
+  envVarNames?: string[];
+  videoSettingsResolver?: (settings: AppData['videoSettings']) => Array<{ name: string; apiKey: string; platform?: string }>;
+  missingKeyMessage?: string;
+};
+
 export class KeyPool {
   private entries: KeyPoolEntry[] = [];
 
   private index = 0;
 
-  constructor(private readonly platformMatcher: (platform: string) => boolean) {}
+  constructor(
+    private readonly platformMatcher: (platform: string) => boolean,
+    private readonly options: KeyPoolOptions = {},
+  ) {}
 
   async init() {
     const data = await readAppData();
@@ -22,29 +32,44 @@ export class KeyPool {
 
     const entries: KeyPoolEntry[] = [];
 
-    const envKey = process.env.KIE_API_KEY?.trim();
-    if (envKey) {
-      entries.push({
-        name: 'env',
-        apiKey: envKey,
-        platform: 'environment',
-      });
-    }
+    const envVarNames = this.options.envVarNames ?? ['KIE_API_KEY'];
+    envVarNames.forEach((envName) => {
+      const value = process.env[envName]?.trim();
+      if (value) {
+        entries.push({
+          name: `env:${envName}`,
+          apiKey: value,
+          platform: envName.toLowerCase(),
+        });
+      }
+    });
 
-    if (data.videoSettings.apiKey?.trim()) {
+    const settingEntries = this.options.videoSettingsResolver
+      ? this.options.videoSettingsResolver(data.videoSettings)
+      : data.videoSettings.apiKey?.trim()
+        ? [
+            {
+              name: 'videoSettings',
+              apiKey: data.videoSettings.apiKey.trim(),
+              platform: 'videoSettings',
+            },
+          ]
+        : [];
+
+    settingEntries.forEach(({ name, apiKey, platform }) => {
       entries.push({
-        name: 'videoSettings',
-        apiKey: data.videoSettings.apiKey.trim(),
-        platform: 'videoSettings',
+        name,
+        apiKey,
+        platform: (platform ?? 'videoSettings').toLowerCase(),
       });
-    }
+    });
 
     entries.push(...candidates);
 
     this.entries = entries;
 
     if (!this.entries.length) {
-      throw new Error('未配置可用的 KIE.AI API 密钥');
+      throw new Error(this.options.missingKeyMessage ?? '未配置可用的 API 密钥');
     }
   }
 

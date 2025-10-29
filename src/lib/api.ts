@@ -172,11 +172,20 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  startVideoGeneration: (numbers?: string[]) =>
-    request<{ success: boolean; message?: string }>('/api/generate/videos', {
+  startVideoGeneration: (input?: string[] | { numbers?: string[]; provider?: string; workflow?: 'A' | 'B' }) => {
+    const payload =
+      Array.isArray(input) || input === undefined
+        ? { numbers: Array.isArray(input) && input.length ? input : undefined }
+        : {
+            numbers: input.numbers && input.numbers.length ? input.numbers : undefined,
+            provider: input.provider,
+            workflow: input.workflow,
+          };
+    return request<{ success: boolean; message?: string }>('/api/generate/videos', {
       method: 'POST',
-      body: JSON.stringify({ numbers }),
-    }),
+      body: JSON.stringify(payload),
+    });
+  },
   openFolder: (pathToOpen: string) =>
     request<{ success: boolean; directory?: string; message?: string }>('/api/system/open-folder', {
       method: 'POST',

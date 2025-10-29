@@ -42,6 +42,13 @@ const STATUS_COLOR: Record<string, string> = {
   提交中: 'bg-sky-100 text-sky-700 border border-sky-200',
 };
 
+const VIDEO_PROVIDER_OPTIONS = [
+  { value: 'kie-veo3-fast', label: 'KIE · Veo3 Fast' },
+  { value: 'yunwu-veo3-fast', label: '云雾 · Veo3 Fast' },
+] as const;
+
+type VideoProviderOption = (typeof VIDEO_PROVIDER_OPTIONS)[number]['value'];
+
 interface VideoTaskBoardProps {
   variant?: 'default' | 'embedded';
   showCreateButton?: boolean;
@@ -139,6 +146,7 @@ export function VideoTaskBoard({
 
   const [activePage, setActivePage] = useState<'tasks' | 'create'>('tasks');
   const [formResetKey, setFormResetKey] = useState(0);
+  const [selectedProvider, setSelectedProvider] = useState<VideoProviderOption>('kie-veo3-fast');
   const isEmbedded = variant === 'embedded';
   const highlightSet = useMemo(() => new Set(highlightNumbers), [highlightNumbers]);
 
@@ -207,7 +215,11 @@ export function VideoTaskBoard({
   });
 
   const generateMutation = useMutation({
-    mutationFn: (numbers?: string[]) => api.startVideoGeneration(numbers?.length ? numbers : undefined),
+    mutationFn: ({ numbers, provider }: { numbers?: string[]; provider: VideoProviderOption }) =>
+      api.startVideoGeneration({
+        numbers: numbers && numbers.length ? numbers : undefined,
+        provider,
+      }),
     onSuccess: (response) => {
       if (response.success) {
         toast.success('视频任务已提交');
@@ -246,7 +258,10 @@ export function VideoTaskBoard({
       await queryClient.invalidateQueries({ queryKey: ['video-tasks'] });
       await queryClient.refetchQueries({ queryKey: ['video-tasks'], type: 'active' });
       if (variables.regenerate && count) {
-        generateMutation.mutate(variables.numbers);
+        generateMutation.mutate({
+          numbers: variables.numbers,
+          provider: selectedProvider,
+        });
       }
     },
     onError: (error: Error) => toast.error(error.message || '更新画幅比例失败'),
@@ -276,7 +291,10 @@ export function VideoTaskBoard({
       await queryClient.invalidateQueries({ queryKey: ['video-tasks'] });
       await queryClient.refetchQueries({ queryKey: ['video-tasks'], type: 'active' });
       if (numbers.length) {
-        generateMutation.mutate(numbers);
+        generateMutation.mutate({
+          numbers,
+          provider: selectedProvider,
+        });
       }
     },
     onError: (error: Error) => toast.error(error.message || '重置任务失败'),
@@ -345,7 +363,8 @@ export function VideoTaskBoard({
   };
 
   const handleStartGeneration = () => {
-    generateMutation.mutate(selected.size ? Array.from(selected) : undefined);
+    const numbers = selected.size ? Array.from(selected) : undefined;
+    generateMutation.mutate({ numbers, provider: selectedProvider });
   };
 
   const handleRegenerateSelected = () => {
@@ -585,14 +604,35 @@ export function VideoTaskBoard({
                 视频存储文件夹
               </Button>
               {showGenerateButton && (
-                <Button
-                  size="sm"
-                  className="ml-auto bg-purple-600 hover:bg-purple-700"
-                  disabled={generateMutation.isPending || resetTasksMutation.isPending}
-                  onClick={handleStartGeneration}
-                >
-                  <PlayCircleIcon className="mr-2 h-4 w-4" /> 开始生成视频
-                </Button>
+                <div className="ml-auto flex items-center gap-2">
+                  <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1">
+                    <span className="text-xs font-medium text-slate-600">模型</span>
+                    <Select
+                      value={selectedProvider}
+                      onValueChange={(value) => setSelectedProvider(value as VideoProviderOption)}
+                      disabled={generateMutation.isPending || resetTasksMutation.isPending}
+                    >
+                      <SelectTrigger className="h-8 w-[160px]">
+                        <SelectValue placeholder="选择模型" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VIDEO_PROVIDER_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700"
+                    disabled={generateMutation.isPending || resetTasksMutation.isPending}
+                    onClick={handleStartGeneration}
+                  >
+                    <PlayCircleIcon className="mr-2 h-4 w-4" /> 开始生成视频
+                  </Button>
+                </div>
               )}
             </div>
           </CardHeader>

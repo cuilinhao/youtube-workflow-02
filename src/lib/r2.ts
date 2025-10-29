@@ -30,7 +30,7 @@ export const r2Bucket = bucket;
 export const s3Client = new S3Client({
   region: 'auto',
   endpoint,
-  forcePathStyle: true,
+  // Rely on virtual-hosted style URLs (forcePathStyle=false); path-style fails TLS handshake on R2's account endpoint.
   credentials: {
     accessKeyId,
     secretAccessKey,
