@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { readAppData, writeAppData } from '@/lib/data-store';
+import { updateAppData } from '@/lib/data-store';
 import type { VideoTask } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -19,16 +19,23 @@ export async function PATCH(
     delete payload.number;
   }
 
-  const data = await readAppData();
-  const task = data.videoTasks.find((item) => item.number === number);
-  if (!task) {
+  let updatedTask: VideoTask | undefined;
+
+  await updateAppData((draft) => {
+    const task = draft.videoTasks.find((item) => item.number === number);
+    if (!task) {
+      return draft;
+    }
+    Object.assign(task, payload, { updatedAt: new Date().toISOString() });
+    updatedTask = { ...task };
+    return draft;
+  });
+
+  if (!updatedTask) {
     return NextResponse.json({ success: false, message: '视频任务不存在' }, { status: 404 });
   }
 
-  Object.assign(task, payload, { updatedAt: new Date().toISOString() });
-
-  await writeAppData(data);
-  return NextResponse.json({ success: true, task });
+  return NextResponse.json({ success: true, task: updatedTask });
 }
 
 export async function DELETE(
@@ -37,14 +44,20 @@ export async function DELETE(
 ) {
   const { number: encodedNumber } = await Promise.resolve(context.params);
   const number = decodeURIComponent(encodedNumber);
-  const data = await readAppData();
-  const index = data.videoTasks.findIndex((item) => item.number === number);
-  if (index < 0) {
+  let removed = false;
+  await updateAppData((draft) => {
+    const index = draft.videoTasks.findIndex((item) => item.number === number);
+    if (index < 0) {
+      return draft;
+    }
+    draft.videoTasks.splice(index, 1);
+    removed = true;
+    return draft;
+  });
+
+  if (!removed) {
     return NextResponse.json({ success: false, message: '视频任务不存在' }, { status: 404 });
   }
-
-  data.videoTasks.splice(index, 1);
-  await writeAppData(data);
 
   return NextResponse.json({ success: true });
 }

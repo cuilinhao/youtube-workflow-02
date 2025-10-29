@@ -116,6 +116,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
+  updateVideoTasks: (numbers: string[], payload: { updates: Partial<VideoTask>; resetGeneration?: boolean }) =>
+    request<{ success: boolean; tasks: VideoTask[] }>('/api/video-tasks/batch', {
+      method: 'PATCH',
+      body: JSON.stringify({ numbers, ...payload }),
+    }),
   removeVideoTask: (number: string) =>
     request<{ success: boolean }>(`/api/video-tasks/${encodeURIComponent(number)}`, {
       method: 'DELETE',

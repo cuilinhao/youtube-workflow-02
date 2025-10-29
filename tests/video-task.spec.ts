@@ -26,9 +26,8 @@ test.describe('批量图生视频任务创建', () => {
     console.log('文件路径1:', file1);
     console.log('文件路径2:', file2);
 
-    // 找到"添加单张图片"按钮并点击两次，分别上传两个文件
-    // 注意：有两个input，第一个是文件夹上传，第二个是单张图片上传
-    const singleImageInput = page.locator('input[type="file"]:not([multiple])');
+    // 通过隐藏的文件 input 上传两张图片（按钮文案：添加多张图片）
+    const singleImageInput = page.getByTestId('video-task-form-image-input');
 
     // 上传第一个文件
     await singleImageInput.setInputFiles(file1);

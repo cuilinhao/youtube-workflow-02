@@ -64,8 +64,6 @@ interface UpdateAspectRatioVariables {
   regenerate?: boolean;
 }
 
-type UpdateVideoTaskResponse = Awaited<ReturnType<typeof api.updateVideoTask>>;
-
 function getFileName(raw?: string | null) {
   if (!raw) return '';
 
@@ -234,32 +232,22 @@ export function VideoTaskBoard({
     onError: (error: Error) => toast.error(error.message || '启动图生视频失败'),
   });
 
-  const updateAspectRatioMutation = useMutation<UpdateVideoTaskResponse[], Error, UpdateAspectRatioVariables>({
+  const updateAspectRatioMutation = useMutation<VideoTask[], Error, UpdateAspectRatioVariables>({
     mutationFn: async ({ numbers, aspectRatio }: UpdateAspectRatioVariables) => {
       if (!numbers.length) return [];
-      const resetPayload: Partial<VideoTask> = {
-        aspectRatio,
-        status: '等待中',
-        progress: 0,
-        remoteUrl: null,
-        localPath: null,
-        errorMsg: null,
-        providerRequestId: null,
-        actualFilename: null,
-        fingerprint: null,
-        finishedAt: null,
-        startedAt: null,
-        attempts: 0,
-      };
-      return Promise.all(numbers.map((number) => api.updateVideoTask(number, resetPayload)));
+      const response = await api.updateVideoTasks(numbers, {
+        updates: { aspectRatio },
+        resetGeneration: true,
+      });
+      return response.tasks ?? [];
     },
-    onSuccess: async (results, variables) => {
+    onSuccess: async (tasks, variables) => {
       const count = variables.numbers.length;
       toast.success(`已更新 ${count} 个任务的画幅比例为 ${variables.aspectRatio}`);
       setIsAspectDialogOpen(false);
       setPendingAspectRatio('');
-      if (results?.length) {
-        const updatedMap = new Map(results.map((result) => [result.task.number, result.task]));
+      if (tasks?.length) {
+        const updatedMap = new Map(tasks.map((task) => [task.number, task]));
         queryClient.setQueryData<{ videoTasks: VideoTask[] } | undefined>(['video-tasks'], (previous) => {
           if (!previous) return previous;
           const nextVideoTasks = previous.videoTasks.map((task) => updatedMap.get(task.number) ?? task);
@@ -341,6 +329,7 @@ export function VideoTaskBoard({
     () => sortedTasks.filter((task) => selected.has(task.number)),
     [sortedTasks, selected],
   );
+  const selectedNumbers = useMemo(() => Array.from(selected), [selected]);
   useEffect(() => {
     setSelected((prev) => {
       if (!prev.size) return prev;
@@ -409,8 +398,12 @@ export function VideoTaskBoard({
   };
 
   const handleRegenerateSelected = () => {
-    if (!selectedTasks.length) {
+    if (!selectedNumbers.length) {
       toast.warning('请先选择要重新生成的任务');
+      return;
+    }
+    if (!selectedTasks.length) {
+      toast.warning('所选任务暂未加载完成，请稍后重试');
       return;
     }
     if (resetTasksMutation.isPending) {
@@ -420,8 +413,12 @@ export function VideoTaskBoard({
   };
 
   const handleOpenAspectDialog = () => {
-    if (!selectedTasks.length) {
+    if (!selectedNumbers.length) {
       toast.warning('请先选择要修改的任务');
+      return;
+    }
+    if (!selectedTasks.length) {
+      toast.warning('所选任务暂未加载完成，请稍后再试');
       return;
     }
     if (updateAspectRatioMutation.isPending) return;
@@ -443,7 +440,7 @@ export function VideoTaskBoard({
   };
 
   const handleAspectRatioSubmit = (action: 'update' | 'update-and-regenerate') => {
-    if (!selectedTasks.length) {
+    if (!selectedNumbers.length) {
       toast.warning('请先选择要修改的任务');
       return;
     }
@@ -452,7 +449,7 @@ export function VideoTaskBoard({
       return;
     }
     updateAspectRatioMutation.mutate({
-      numbers: selectedTasks.map((task) => task.number),
+      numbers: selectedNumbers,
       aspectRatio: pendingAspectRatio,
       regenerate: action === 'update-and-regenerate',
     });
@@ -633,7 +630,7 @@ export function VideoTaskBoard({
                 variant="outline"
                 size="sm"
                 onClick={handleOpenAspectDialog}
-                disabled={!selectedTasks.length || updateAspectRatioMutation.isPending || resetTasksMutation.isPending}
+                disabled={!selectedNumbers.length || updateAspectRatioMutation.isPending || resetTasksMutation.isPending}
               >
                 <CropIcon className="mr-2 h-4 w-4" /> 修改画幅
               </Button>
@@ -641,7 +638,7 @@ export function VideoTaskBoard({
                 variant="outline"
                 size="sm"
                 onClick={handleRegenerateSelected}
-                disabled={!selectedTasks.length || resetTasksMutation.isPending}
+                disabled={!selectedNumbers.length || resetTasksMutation.isPending}
               >
                 <RotateCcwIcon className="mr-2 h-4 w-4" /> 重新生成选中
               </Button>
@@ -862,7 +859,7 @@ export function VideoTaskBoard({
           <DialogHeader>
             <DialogTitle>批量修改画幅比例</DialogTitle>
             <DialogDescription>
-              将对已选择的 {selectedTasks.length} 个任务应用新的画幅比例，并清空对应生成结果。
+              将对已选择的 {selectedNumbers.length} 个任务应用新的画幅比例，并清空对应生成结果。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

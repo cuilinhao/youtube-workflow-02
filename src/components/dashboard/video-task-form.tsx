@@ -746,6 +746,8 @@ export function VideoTaskForm({
         ref={singleImageInputRef}
         type="file"
         accept="image/*"
+        multiple
+        data-testid="video-task-form-image-input"
         className="hidden"
         onChange={handleSingleImageChange}
         disabled={disableUpload}
@@ -780,7 +782,7 @@ export function VideoTaskForm({
                   onClick={handleSingleImageButtonClick}
                   disabled={disableUpload || isUploadingImages}
                 >
-                  <ImagePlus className="mr-2 h-4 w-4" /> 添加单张图片
+                  <ImagePlus className="mr-2 h-4 w-4" /> 添加多张图片
                 </Button>
                 <Button
                   type="button"
