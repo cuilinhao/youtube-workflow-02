@@ -46,6 +46,7 @@ const VIDEO_PROVIDER_OPTIONS = [
   { value: 'kie-veo3-fast', label: 'KIE · Veo3 Fast' },
   { value: 'yunwu-veo3-fast', label: '云雾 · Veo3 Fast' },
   { value: 'yunwu-veo3.1-fast', label: '云雾 · Veo3.1 Fast' },
+  { value: 'yunwu-sora2', label: '云雾 · Sora 2' },
 ] as const;
 
 type VideoProviderOption = (typeof VIDEO_PROVIDER_OPTIONS)[number]['value'];
@@ -165,9 +166,10 @@ export function VideoTaskBoard({
 
       for (let index = 0; index < payload.rows.length; index += 1) {
         const row = payload.rows[index];
+        const imageUrls = row.imageUrl ? [row.imageUrl] : [];
         const taskPayload = {
           prompt: row.prompt,
-          imageUrls: [row.imageUrl],
+          imageUrls,
           aspectRatio: payload.aspectRatio,
           watermark: payload.watermark,
           callbackUrl: payload.callbackUrl,
@@ -394,6 +396,29 @@ export function VideoTaskBoard({
 
   const handleStartGeneration = () => {
     const numbers = selected.size ? Array.from(selected) : undefined;
+    const targets = numbers && numbers.length ? sortedTasks.filter((task) => numbers.includes(task.number)) : sortedTasks;
+    const actionableStatuses = new Set(['等待中', '失败', '提交中', '生成中']);
+    const actionableTasks = targets.filter((task) => actionableStatuses.has(task.status));
+
+    if (!actionableTasks.length) {
+      toast.info('没有可提交的任务');
+      return;
+    }
+
+    if (selectedProvider !== 'yunwu-sora2') {
+      const missingImages = actionableTasks.filter((task) => !(task.imageUrls && task.imageUrls[0]));
+      if (missingImages.length) {
+        toast.error(`以下任务缺少参考图：${missingImages.map((task) => task.number).join('、')}，请补充后再试。`);
+        return;
+      }
+    } else {
+      const missingPrompts = actionableTasks.filter((task) => !task.prompt?.trim());
+      if (missingPrompts.length) {
+        toast.error(`以下任务缺少提示词：${missingPrompts.map((task) => task.number).join('、')}，请补充后再试。`);
+        return;
+      }
+    }
+
     generateMutation.mutate({ numbers, provider: selectedProvider });
   };
 

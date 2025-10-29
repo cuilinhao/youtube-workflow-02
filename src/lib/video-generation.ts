@@ -5,11 +5,12 @@ import { KeyPool } from '@/lib/jobs/engine/KeyPool';
 import { videoTaskToBaseTask, applyBaseTaskToVideoTask } from '@/lib/jobs/engine/videoTaskAdapter';
 import { kieVeo3Provider } from '@/providers/video/kieVeo3';
 import { yunwuVeo3Provider } from '@/providers/video/yunwuVeo3';
+import { yunwuSora2Provider } from '@/providers/video/yunwuSora2';
 import { presetA } from '@/providers/video/kieVeo3.presetA';
 import { presetB } from '@/providers/video/kieVeo3.presetB';
 import type { BaseTask } from '@/lib/jobs/types/job';
 
-type ProviderKey = 'kie-veo3-fast' | 'yunwu-veo3-fast' | 'yunwu-veo3.1-fast';
+type ProviderKey = 'kie-veo3-fast' | 'yunwu-veo3-fast' | 'yunwu-veo3.1-fast' | 'yunwu-sora2';
 
 interface GenerateVideosPayload {
   numbers?: string[];
@@ -40,7 +41,7 @@ async function handleTaskUpdate(baseTask: BaseTask) {
   });
 }
 
-const SUPPORTED_PROVIDERS: ProviderKey[] = ['kie-veo3-fast', 'yunwu-veo3-fast', 'yunwu-veo3.1-fast'];
+const SUPPORTED_PROVIDERS: ProviderKey[] = ['kie-veo3-fast', 'yunwu-veo3-fast', 'yunwu-veo3.1-fast', 'yunwu-sora2'];
 
 export async function generateVideos({ numbers, workflow = 'A', provider: requestedProvider }: GenerateVideosPayload) {
   const providerKey: ProviderKey = SUPPORTED_PROVIDERS.includes(requestedProvider as ProviderKey)
@@ -53,9 +54,19 @@ export async function generateVideos({ numbers, workflow = 'A', provider: reques
   };
 
   const isYunwuProvider = providerKey.startsWith('yunwu-');
-  const yunwuModel = providerKey === 'yunwu-veo3.1-fast' ? 'veo3.1' : 'veo3-fast';
+  const yunwuModel = providerKey === 'yunwu-veo3.1-fast' ? 'veo3.1' : providerKey === 'yunwu-veo3-fast' ? 'veo3-fast' : 'sora-2';
 
-  if (isYunwuProvider) {
+  if (providerKey === 'yunwu-sora2') {
+    Object.assign(preset, {
+      model: yunwuModel,
+      provider: 'yunwu',
+      defaultOrientation: 'portrait',
+      defaultSize: 'large',
+      defaultDuration: 15,
+      defaultPrivate: true,
+      defaultWatermarkEnabled: false,
+    });
+  } else if (isYunwuProvider) {
     Object.assign(preset, {
       model: yunwuModel,
       enhancePrompt: true,
@@ -104,8 +115,14 @@ export async function generateVideos({ numbers, workflow = 'A', provider: reques
       );
   await keyPool.init();
 
+  const providerImpl = (() => {
+    if (providerKey === 'yunwu-sora2') return yunwuSora2Provider;
+    if (providerKey === 'yunwu-veo3-fast' || providerKey === 'yunwu-veo3.1-fast') return yunwuVeo3Provider;
+    return kieVeo3Provider;
+  })();
+
   const engineOptions: EngineOptions = {
-    provider: isYunwuProvider ? yunwuVeo3Provider : kieVeo3Provider,
+    provider: providerImpl,
     preset,
     concurrency: threadCount,
     maxAttempts,

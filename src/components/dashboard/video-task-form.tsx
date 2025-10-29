@@ -614,12 +614,6 @@ export function VideoTaskForm({
       return;
     }
 
-    const hasEmptyImage = trimmedRows.some((row) => !row.imageUrl);
-    if (hasEmptyImage) {
-      toast.error('图片路径不能为空');
-      return;
-    }
-
     const someHavePrompts = trimmedRows.some((row) => row.prompt);
 
     if (!someHavePrompts) {
@@ -804,7 +798,7 @@ export function VideoTaskForm({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              一行对应一张参考图与提示词，支持本地路径或在线 URL。
+              一行对应一张参考图与提示词，支持本地路径或在线 URL；若使用云雾 Sora 2，可只填写提示词。
             </p>
 
             <div
