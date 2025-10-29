@@ -27,7 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2Icon, FilmIcon, PlayCircleIcon, CropIcon, RotateCcwIcon } from 'lucide-react';
+import { Trash2Icon, FilmIcon, PlayCircleIcon, CropIcon, RotateCcwIcon, CheckSquareIcon } from 'lucide-react';
 import { api, VideoTask } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { VIDEO_ASPECT_RATIO_OPTIONS } from '@/constants/video';
@@ -62,6 +62,8 @@ interface UpdateAspectRatioVariables {
   aspectRatio: string;
   regenerate?: boolean;
 }
+
+type UpdateVideoTaskResponse = Awaited<ReturnType<typeof api.updateVideoTask>>;
 
 function getFileName(raw?: string | null) {
   if (!raw) return '';
@@ -231,7 +233,7 @@ export function VideoTaskBoard({
     onError: (error: Error) => toast.error(error.message || '启动图生视频失败'),
   });
 
-  const updateAspectRatioMutation = useMutation({
+  const updateAspectRatioMutation = useMutation<UpdateVideoTaskResponse[], Error, UpdateAspectRatioVariables>({
     mutationFn: async ({ numbers, aspectRatio }: UpdateAspectRatioVariables) => {
       if (!numbers.length) return [];
       const resetPayload: Partial<VideoTask> = {
@@ -250,11 +252,19 @@ export function VideoTaskBoard({
       };
       return Promise.all(numbers.map((number) => api.updateVideoTask(number, resetPayload)));
     },
-    onSuccess: async (_results, variables) => {
+    onSuccess: async (results, variables) => {
       const count = variables.numbers.length;
       toast.success(`已更新 ${count} 个任务的画幅比例为 ${variables.aspectRatio}`);
       setIsAspectDialogOpen(false);
       setPendingAspectRatio('');
+      if (results?.length) {
+        const updatedMap = new Map(results.map((result) => [result.task.number, result.task]));
+        queryClient.setQueryData<{ videoTasks: VideoTask[] } | undefined>(['video-tasks'], (previous) => {
+          if (!previous) return previous;
+          const nextVideoTasks = previous.videoTasks.map((task) => updatedMap.get(task.number) ?? task);
+          return { ...previous, videoTasks: nextVideoTasks };
+        });
+      }
       await queryClient.invalidateQueries({ queryKey: ['video-tasks'] });
       await queryClient.refetchQueries({ queryKey: ['video-tasks'], type: 'active' });
       if (variables.regenerate && count) {
@@ -330,6 +340,26 @@ export function VideoTaskBoard({
     () => sortedTasks.filter((task) => selected.has(task.number)),
     [sortedTasks, selected],
   );
+  useEffect(() => {
+    setSelected((prev) => {
+      if (!prev.size) return prev;
+      const valid = new Set(sortedTasks.map((task) => task.number));
+      let changed = false;
+      const next = new Set<string>();
+      prev.forEach((number) => {
+        if (valid.has(number)) {
+          next.add(number);
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [sortedTasks]);
+  const areAllVisibleTasksSelected = useMemo(
+    () => sortedTasks.length > 0 && sortedTasks.every((task) => selected.has(task.number)),
+    [sortedTasks, selected],
+  );
   const hasMixedSelectedAspectRatios = useMemo(() => {
     if (selectedTasks.length <= 1) return false;
     const unique = new Set(selectedTasks.map((task) => task.aspectRatio));
@@ -351,6 +381,16 @@ export function VideoTaskBoard({
         next.delete(number);
       }
       return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    setSelected((prev) => {
+      const allSelected = sortedTasks.every((task) => prev.has(task.number));
+      if (allSelected) {
+        return new Set<string>();
+      }
+      return new Set(sortedTasks.map((task) => task.number));
     });
   };
 
@@ -563,6 +603,15 @@ export function VideoTaskBoard({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleToggleSelectAll}
+                disabled={!sortedTasks.length}
+              >
+                <CheckSquareIcon className="mr-2 h-4 w-4" />
+                {areAllVisibleTasksSelected ? '取消全选' : '选中全部'}
+              </Button>
               <Button
                 variant="secondary"
                 size="sm"

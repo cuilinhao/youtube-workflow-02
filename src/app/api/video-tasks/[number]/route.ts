@@ -4,11 +4,16 @@ import type { VideoTask } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
+type RouteContext =
+  | { params: { number: string } }
+  | { params: Promise<{ number: string }> };
+
 export async function PATCH(
   request: Request,
-  { params }: { params: { number: string } },
+  context: RouteContext,
 ) {
-  const number = decodeURIComponent(params.number);
+  const { number: encodedNumber } = await Promise.resolve(context.params);
+  const number = decodeURIComponent(encodedNumber);
   const payload = (await request.json()) as Partial<VideoTask>;
   if (payload.number && payload.number !== number) {
     delete payload.number;
@@ -28,9 +33,10 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { number: string } },
+  context: RouteContext,
 ) {
-  const number = decodeURIComponent(params.number);
+  const { number: encodedNumber } = await Promise.resolve(context.params);
+  const number = decodeURIComponent(encodedNumber);
   const data = await readAppData();
   const index = data.videoTasks.findIndex((item) => item.number === number);
   if (index < 0) {
