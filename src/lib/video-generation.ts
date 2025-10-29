@@ -9,10 +9,12 @@ import { presetA } from '@/providers/video/kieVeo3.presetA';
 import { presetB } from '@/providers/video/kieVeo3.presetB';
 import type { BaseTask } from '@/lib/jobs/types/job';
 
+type ProviderKey = 'kie-veo3-fast' | 'yunwu-veo3-fast' | 'yunwu-veo3.1-fast';
+
 interface GenerateVideosPayload {
   numbers?: string[];
   workflow?: 'A' | 'B';
-  provider?: 'kie-veo3-fast' | 'yunwu-veo3-fast';
+  provider?: ProviderKey;
 }
 
 function resolveSaveDir(savePath: string): string {
@@ -38,17 +40,24 @@ async function handleTaskUpdate(baseTask: BaseTask) {
   });
 }
 
+const SUPPORTED_PROVIDERS: ProviderKey[] = ['kie-veo3-fast', 'yunwu-veo3-fast', 'yunwu-veo3.1-fast'];
+
 export async function generateVideos({ numbers, workflow = 'A', provider: requestedProvider }: GenerateVideosPayload) {
-  const providerKey = requestedProvider === 'yunwu-veo3-fast' ? 'yunwu-veo3-fast' : 'kie-veo3-fast';
+  const providerKey: ProviderKey = SUPPORTED_PROVIDERS.includes(requestedProvider as ProviderKey)
+    ? (requestedProvider as ProviderKey)
+    : 'kie-veo3-fast';
   const data = await readAppData();
   const basePreset = pickPreset(workflow);
   const preset: Record<string, unknown> = {
     ...basePreset,
   };
 
-  if (providerKey === 'yunwu-veo3-fast') {
+  const isYunwuProvider = providerKey.startsWith('yunwu-');
+  const yunwuModel = providerKey === 'yunwu-veo3.1-fast' ? 'veo3.1' : 'veo3-fast';
+
+  if (isYunwuProvider) {
     Object.assign(preset, {
-      model: 'veo3-fast',
+      model: yunwuModel,
       enhancePrompt: true,
       enableUpsample: true,
       provider: 'yunwu',
@@ -77,27 +86,26 @@ export async function generateVideos({ numbers, workflow = 'A', provider: reques
     return { success: false, message: '没有需要生成的视频任务' };
   }
 
-  const keyPool =
-    providerKey === 'yunwu-veo3-fast'
-      ? new KeyPool(
-          (platform) => platform.includes('云雾') || platform.includes('yunwu') || platform.includes('yun-wu'),
-          {
-            envVarNames: ['YUNWU_API_KEY'],
-            videoSettingsResolver: () => [],
-            missingKeyMessage: '未配置可用的云雾平台 API 密钥',
-          },
-        )
-      : new KeyPool(
-          (platform) => ['kie.ai', 'kie', 'kei', 'kieai'].includes(platform),
-          {
-            envVarNames: ['KIE_API_KEY'],
-            missingKeyMessage: '未配置可用的 KIE.AI API 密钥',
-          },
-        );
+  const keyPool = isYunwuProvider
+    ? new KeyPool(
+        (platform) => platform.includes('云雾') || platform.includes('yunwu') || platform.includes('yun-wu'),
+        {
+          envVarNames: ['YUNWU_API_KEY'],
+          videoSettingsResolver: () => [],
+          missingKeyMessage: '未配置可用的云雾平台 API 密钥',
+        },
+      )
+    : new KeyPool(
+        (platform) => ['kie.ai', 'kie', 'kei', 'kieai'].includes(platform),
+        {
+          envVarNames: ['KIE_API_KEY'],
+          missingKeyMessage: '未配置可用的 KIE.AI API 密钥',
+        },
+      );
   await keyPool.init();
 
   const engineOptions: EngineOptions = {
-    provider: providerKey === 'yunwu-veo3-fast' ? yunwuVeo3Provider : kieVeo3Provider,
+    provider: isYunwuProvider ? yunwuVeo3Provider : kieVeo3Provider,
     preset,
     concurrency: threadCount,
     maxAttempts,

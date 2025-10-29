@@ -45,6 +45,7 @@ const STATUS_COLOR: Record<string, string> = {
 const VIDEO_PROVIDER_OPTIONS = [
   { value: 'kie-veo3-fast', label: 'KIE · Veo3 Fast' },
   { value: 'yunwu-veo3-fast', label: '云雾 · Veo3 Fast' },
+  { value: 'yunwu-veo3.1-fast', label: '云雾 · Veo3.1 Fast' },
 ] as const;
 
 type VideoProviderOption = (typeof VIDEO_PROVIDER_OPTIONS)[number]['value'];
