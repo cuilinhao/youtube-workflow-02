@@ -18,6 +18,7 @@ export type EngineOptions = {
   preset: Record<string, unknown>;
   concurrency?: number;
   maxAttempts?: number;
+  batchDelayMs?: number;
   storage: EngineStorageOptions;
   keyPool: KeyPool;
   onTaskUpdate?: (task: BaseTask) => void | Promise<void>;
@@ -42,6 +43,8 @@ export class VideoBatchEngine {
       provider: options.provider,
       queue: this.queue,
       keyPool: options.keyPool,
+      // Defer to caller to decide whether cross-batch spacing is required (e.g. rate limit sensitive providers).
+      batchDelayMs: options.batchDelayMs,
     });
 
     this.poller = new Poller({

@@ -79,6 +79,8 @@ export async function generateVideos({ numbers, workflow = 'A', provider: reques
 
   const threadCount = Math.max(1, data.apiSettings.threadCount ?? 1);
   const maxAttempts = Math.max(1, data.apiSettings.retryCount ?? 3);
+  // KIE 接口限流严格，提交时默认在批次之间强制等待 30 秒；云雾侧暂不需要。
+  const submitBatchDelayMs = providerKey.startsWith('kie-') ? 30_000 : 0;
   const saveDir = resolveSaveDir(data.videoSettings.savePath);
 
   const targets = (() => {
@@ -126,6 +128,8 @@ export async function generateVideos({ numbers, workflow = 'A', provider: reques
     preset,
     concurrency: threadCount,
     maxAttempts,
+    // Runner 会按照该延迟控制批次节奏，避免提交洪峰。
+    batchDelayMs: submitBatchDelayMs,
     storage: { baseDir: saveDir, kind: 'local' },
     keyPool,
     onTaskUpdate: handleTaskUpdate,

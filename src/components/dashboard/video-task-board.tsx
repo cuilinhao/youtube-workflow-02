@@ -268,23 +268,46 @@ export function VideoTaskBoard({
     onError: (error: Error) => toast.error(error.message || '更新画幅比例失败'),
   });
 
-  const resetTasksMutation = useMutation({
+  // Reuse相同的重置字段，确保 UI 与服务端保持一致。
+  const createResetPayload = (): Partial<VideoTask> => ({
+    status: '等待中',
+    progress: 0,
+    remoteUrl: null,
+    localPath: null,
+    errorMsg: null,
+    providerRequestId: null,
+    actualFilename: null,
+    fingerprint: null,
+    finishedAt: null,
+    startedAt: null,
+    attempts: 0,
+  });
+
+  const resetTasksMutation = useMutation<
+    { success: boolean; task: VideoTask }[],
+    Error,
+    VideoTask[],
+    { previous?: { videoTasks: VideoTask[] } }
+  >({
     mutationFn: async (tasks: VideoTask[]) => {
       if (!tasks.length) return [];
-      const resetPayload: Partial<VideoTask> = {
-        status: '等待中',
-        progress: 0,
-        remoteUrl: null,
-        localPath: null,
-        errorMsg: null,
-        providerRequestId: null,
-        actualFilename: null,
-        fingerprint: null,
-        finishedAt: null,
-        startedAt: null,
-        attempts: 0,
-      };
+      const resetPayload = createResetPayload();
       return Promise.all(tasks.map((task) => api.updateVideoTask(task.number, resetPayload)));
+    },
+    onMutate: async (tasks) => {
+      if (!tasks.length) return undefined;
+      await queryClient.cancelQueries({ queryKey: ['video-tasks'] });
+      const previous = queryClient.getQueryData<{ videoTasks: VideoTask[] }>(['video-tasks']);
+      if (previous) {
+        // 立即在前端清空错误信息，提供秒级的反馈体验。
+        const resetPayload = createResetPayload();
+        const numbers = new Set(tasks.map((task) => task.number));
+        const next = previous.videoTasks.map((task) =>
+          numbers.has(task.number) ? { ...task, ...resetPayload } : task,
+        );
+        queryClient.setQueryData(['video-tasks'], { videoTasks: next });
+      }
+      return { previous };
     },
     onSuccess: async (_results, tasks) => {
       const numbers = tasks.map((task) => task.number);
@@ -298,7 +321,13 @@ export function VideoTaskBoard({
         });
       }
     },
-    onError: (error: Error) => toast.error(error.message || '重置任务失败'),
+    onError: (error: Error, _tasks, context) => {
+      if (context?.previous) {
+        // 若写入失败，将列表回滚至原始状态，避免展示脏数据。
+        queryClient.setQueryData(['video-tasks'], context.previous);
+      }
+      toast.error(error.message || '重置任务失败');
+    },
   });
 
   const updatePromptMutation = useMutation({
