@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export type DashboardTab =
   | 'text-to-image'
@@ -21,88 +22,99 @@ export function LeftPanel({ activeTab, onTabChange }: LeftPanelProps) {
   const options = [
     {
       id: 'text-to-image' as const,
-      title: '批量文生图',
+      title: '文生图',
       icon: '🖼',
-      description: '批量生成 AI 图片',
+      description: 'AI 图片生成',
     },
     {
       id: 'image-to-video' as const,
-      title: '批量图生视频',
+      title: '图生视频',
       icon: '📹',
-      description: 'Veo3 图片转视频',
+      description: 'Veo3 转视频',
     },
     {
       id: 'video-workflow' as const,
-      title: '视频生成工作流',
+      title: '视频工作流',
       icon: '🎬',
-      description: '视频生成工作流程管理',
+      description: '流程管理',
     },
     {
       id: 'settings' as const,
-      title: '设置中心',
+      title: '设置',
       icon: '⚙️',
-      description: '配置全局生成参数',
+      description: '全局参数',
     },
     {
       id: 'style-library' as const,
       title: '风格库',
       icon: '🎨',
-      description: '维护常用风格提示语',
+      description: '风格模板',
     },
     {
       id: 'reference-library' as const,
       title: '参考图库',
       icon: '🖼️',
-      description: '管理批量出图素材',
+      description: '素材管理',
     },
     {
       id: 'key-manager' as const,
       title: '密钥库',
       icon: '🔑',
-      description: '统一维护 API Key',
+      description: 'API 密钥',
     },
   ];
 
   return (
-    <aside className="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-[300px] border-r border-gray-200 bg-white p-6">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">AI Create</h2>
-          <p className="text-xs text-gray-400">选择生成类型</p>
-        </div>
-        <div className="space-y-3">
-          {options.map((option) => (
-            <Card
-              key={option.id}
-              onClick={() => onTabChange(option.id)}
-              className={cn(
-                'cursor-pointer border-2 transition-all duration-200',
-                'hover:border-blue-400 hover:shadow-md',
-                activeTab === option.id
-                  ? 'border-blue-500 bg-blue-50 shadow-md'
-                  : 'border-gray-200 bg-white'
-              )}
-            >
-              <div className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">{option.icon}</div>
-                  <div className="flex-1">
-                    <h3
-                      className={cn(
-                        'text-base font-semibold',
-                        activeTab === option.id ? 'text-blue-700' : 'text-gray-900'
-                      )}
-                    >
-                      {option.title}
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1">{option.description}</p>
+    <aside className="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-[200px] border-r border-gray-200/80 bg-gradient-to-b from-slate-50 to-white">
+      <ScrollArea className="h-full">
+        <div className="p-4 space-y-4">
+          <div className="space-y-1 px-2">
+            <h2 className="text-xs font-bold text-slate-600 uppercase tracking-wider">AI CREATE</h2>
+            <p className="text-[10px] text-slate-400">选择生成类型</p>
+          </div>
+          <div className="space-y-1.5">
+            {options.map((option) => (
+              <Card
+                key={option.id}
+                onClick={() => onTabChange(option.id)}
+                className={cn(
+                  'cursor-pointer border transition-all duration-200 hover:scale-[1.02]',
+                  activeTab === option.id
+                    ? 'border-blue-400 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md'
+                    : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                )}
+              >
+                <div className="p-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      'text-xl flex-shrink-0',
+                      activeTab === option.id && 'transform scale-110'
+                    )}>
+                      {option.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className={cn(
+                          'text-sm font-bold leading-tight',
+                          activeTab === option.id ? 'text-blue-700' : 'text-slate-800'
+                        )}
+                      >
+                        {option.title}
+                      </h3>
+                      <p className={cn(
+                        'text-[10px] leading-tight mt-0.5 truncate',
+                        activeTab === option.id ? 'text-blue-600' : 'text-slate-500'
+                      )}>
+                        {option.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
+      </ScrollArea>
     </aside>
   );
 }

@@ -34,12 +34,12 @@ import { VIDEO_ASPECT_RATIO_OPTIONS } from '@/constants/video';
 import { VideoTaskForm, VideoTaskFormSubmitPayload, createEmptyVideoTaskDraft } from './video-task-form';
 
 const STATUS_COLOR: Record<string, string> = {
-  等待中: 'bg-slate-100 text-slate-700 border border-slate-200',
-  生成中: 'bg-blue-100 text-blue-700 border border-blue-200',
-  下载中: 'bg-amber-100 text-amber-700 border border-amber-200',
-  成功: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
-  失败: 'bg-rose-100 text-rose-700 border border-rose-200',
-  提交中: 'bg-sky-100 text-sky-700 border border-sky-200',
+  等待中: 'bg-gradient-to-r from-slate-50 to-slate-100 text-slate-700 border border-slate-300 shadow-sm',
+  生成中: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 shadow-md animate-pulse',
+  下载中: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-md',
+  成功: 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0 shadow-md',
+  失败: 'bg-gradient-to-r from-rose-500 to-red-500 text-white border-0 shadow-md',
+  提交中: 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white border-0 shadow-md',
 };
 
 const VIDEO_PROVIDER_OPTIONS = [
@@ -630,135 +630,183 @@ export function VideoTaskBoard({
   return (
     <div className={containerClassName}>
       {activePage === 'tasks' ? (
-        <Card className={cn(isEmbedded ? 'shadow-none border-0' : 'shadow-sm border border-slate-200')}>
-          <CardHeader className="space-y-4">
+        <Card className={cn(isEmbedded ? 'shadow-none border-0' : 'shadow-xl border-0 overflow-hidden bg-gradient-to-br from-white via-slate-50 to-white')}>
+          <CardHeader className="space-y-6 bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 border-b border-slate-200/50">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-xl font-semibold">🎬 图生视频任务</CardTitle>
-                <CardDescription>批量生成 Veo3 视频任务列表</CardDescription>
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center gap-2">
+                  🎬 图生视频任务
+                </CardTitle>
+                <CardDescription className="text-base text-slate-600">批量生成 Veo3 视频任务列表</CardDescription>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <span>任务总数: {videoTasks.length}</span>
-                  <span className="text-emerald-600">成功 {videoTasks.filter((item) => item.status === '成功').length}</span>
-                  <span className="text-rose-600">失败 {videoTasks.filter((item) => item.status === '失败').length}</span>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-4 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                    <span className="text-sm font-semibold text-slate-700">总数 <span className="text-slate-900">{videoTasks.length}</span></span>
+                  </div>
+                  <div className="w-px h-4 bg-slate-200"></div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span className="text-sm font-semibold text-emerald-700">成功 <span className="text-emerald-800">{videoTasks.filter((item) => item.status === '成功').length}</span></span>
+                  </div>
+                  <div className="w-px h-4 bg-slate-200"></div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+                    <span className="text-sm font-semibold text-rose-700">失败 <span className="text-rose-800">{videoTasks.filter((item) => item.status === '失败').length}</span></span>
+                  </div>
                 </div>
                 {showCreateButton && (
                   <Button
                     size="sm"
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-6"
                     onClick={() => setActivePage('create')}
                   >
-                    添加任务
+                    <span className="font-semibold">+ 添加任务</span>
                   </Button>
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleToggleSelectAll}
-                disabled={!sortedTasks.length}
-              >
-                <CheckSquareIcon className="mr-2 h-4 w-4" />
-                {areAllVisibleTasksSelected ? '取消全选' : '选中全部'}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleDeleteSelected}
-                disabled={!selected.size || resetTasksMutation.isPending}
-              >
-                <Trash2Icon className="mr-2 h-4 w-4" /> 删除选中
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => clearTasksMutation.mutate()}
-                disabled={!videoTasks.length}
-              >
-                <Trash2Icon className="mr-2 h-4 w-4" /> 清空全部
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleOpenAspectDialog}
-                disabled={!selectedNumbers.length || updateAspectRatioMutation.isPending || resetTasksMutation.isPending}
-              >
-                <CropIcon className="mr-2 h-4 w-4" /> 修改画幅
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRegenerateSelected}
-                disabled={!selectedNumbers.length || resetTasksMutation.isPending}
-              >
-                <RotateCcwIcon className="mr-2 h-4 w-4" /> 重新生成选中
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleOutputFolderButtonClick}
-                disabled={updateSavePathMutation.isPending || isSelectingOutput}
-              >
-                视频存储文件夹
-              </Button>
-              {showGenerateButton && (
-                <div className="ml-auto flex items-center gap-2">
-                  <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1">
-                    <span className="text-xs font-medium text-slate-600">模型</span>
-                    <Select
-                      value={selectedProvider}
-                      onValueChange={(value) => setSelectedProvider(value as VideoProviderOption)}
-                      disabled={generateMutation.isPending || resetTasksMutation.isPending}
-                    >
-                      <SelectTrigger className="h-8 w-[160px]">
-                        <SelectValue placeholder="选择模型" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {VIDEO_PROVIDER_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-700"
-                    disabled={generateMutation.isPending || resetTasksMutation.isPending}
-                    onClick={handleStartGeneration}
-                  >
-                    <PlayCircleIcon className="mr-2 h-4 w-4" /> 开始生成视频
-                  </Button>
+
+            {/* 操作按钮区域 */}
+            <div className="space-y-3">
+              {/* 第一行：选择和删除操作 */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/70 backdrop-blur-sm rounded-lg border border-slate-200">
+                  <span className="text-xs font-medium text-slate-600">批量操作</span>
                 </div>
-              )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleToggleSelectAll}
+                  disabled={!sortedTasks.length}
+                  className="hover:bg-slate-100 transition-colors"
+                >
+                  <CheckSquareIcon className="mr-1.5 h-3.5 w-3.5" />
+                  {areAllVisibleTasksSelected ? '取消全选' : '选中全部'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  disabled={!selected.size || resetTasksMutation.isPending}
+                  className="hover:bg-rose-50 hover:text-rose-700 transition-colors"
+                >
+                  <Trash2Icon className="mr-1.5 h-3.5 w-3.5" /> 删除选中
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => clearTasksMutation.mutate()}
+                  disabled={!videoTasks.length}
+                  className="hover:bg-rose-50 hover:text-rose-700 transition-colors"
+                >
+                  <Trash2Icon className="mr-1.5 h-3.5 w-3.5" /> 清空全部
+                </Button>
+              </div>
+
+              {/* 第二行：任务操作和生成 */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/70 backdrop-blur-sm rounded-lg border border-slate-200">
+                  <span className="text-xs font-medium text-slate-600">任务操作</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenAspectDialog}
+                  disabled={!selectedNumbers.length || updateAspectRatioMutation.isPending || resetTasksMutation.isPending}
+                  className="bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-all"
+                >
+                  <CropIcon className="mr-1.5 h-3.5 w-3.5" /> 修改画幅
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerateSelected}
+                  disabled={!selectedNumbers.length || resetTasksMutation.isPending}
+                  className="bg-white hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-all"
+                >
+                  <RotateCcwIcon className="mr-1.5 h-3.5 w-3.5" /> 重新生成选中
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOutputFolderButtonClick}
+                  disabled={updateSavePathMutation.isPending || isSelectingOutput}
+                  className="bg-white hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300 transition-all"
+                >
+                  视频存储文件夹
+                </Button>
+
+                {showGenerateButton && (
+                  <div className="ml-auto flex items-center gap-3">
+                    <div className="flex items-center gap-3 rounded-xl border border-slate-300 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
+                      <span className="text-sm font-semibold text-slate-700">模型</span>
+                      <Select
+                        value={selectedProvider}
+                        onValueChange={(value) => setSelectedProvider(value as VideoProviderOption)}
+                        disabled={generateMutation.isPending || resetTasksMutation.isPending}
+                      >
+                        <SelectTrigger className="h-9 w-[180px] border-slate-300 bg-white">
+                          <SelectValue placeholder="选择模型" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {VIDEO_PROVIDER_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-6 py-5"
+                      disabled={generateMutation.isPending || resetTasksMutation.isPending}
+                      onClick={handleStartGeneration}
+                    >
+                      <PlayCircleIcon className="mr-2 h-4 w-4" />
+                      <span className="font-semibold">开始生成视频</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-2 flex items-center gap-3 text-sm font-medium text-slate-700">
-                <FilmIcon className="h-4 w-4" /> 当前批次整体进度
+          <CardContent className="space-y-5 p-6">
+            <div className="rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/50 to-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg">
+                    <FilmIcon className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="text-base font-bold text-slate-800">当前批次整体进度</div>
+                    <div className="text-xs text-slate-500 mt-0.5">总体任务完成情况</div>
+                  </div>
+                </div>
+                <div className="px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                  <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">{overallProgress}%</span>
+                </div>
               </div>
-              <Progress value={overallProgress} className="h-2" />
-              <div className="mt-2 text-xs text-muted-foreground">{overallProgress}%</div>
+              <div className="relative">
+                <Progress value={overallProgress} className="h-3 bg-slate-200" />
+              </div>
             </div>
 
-            <ScrollArea className="h-[500px] rounded-md border border-slate-200">
+            <ScrollArea className="h-[500px] rounded-xl border border-slate-200/60 shadow-sm bg-white">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-100">
-                    <TableHead className="w-12">选择</TableHead>
-                    <TableHead className="w-16">编号</TableHead>
-                    <TableHead className="w-36">参考图</TableHead>
-                    <TableHead className="w-24">画幅</TableHead>
-                    <TableHead>提示词</TableHead>
-                    <TableHead className="w-24">状态</TableHead>
-                    <TableHead className="w-24">错误原因</TableHead>
-                    <TableHead className="w-20">进度</TableHead>
-                    <TableHead className="w-44">生成文件</TableHead>
+                  <TableRow className="bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 border-b-2 border-slate-200">
+                    <TableHead className="w-12 font-bold text-slate-700">选择</TableHead>
+                    <TableHead className="w-16 font-bold text-slate-700">编号</TableHead>
+                    <TableHead className="w-36 font-bold text-slate-700">参考图</TableHead>
+                    <TableHead className="w-24 font-bold text-slate-700">画幅</TableHead>
+                    <TableHead className="font-bold text-slate-700">提示词</TableHead>
+                    <TableHead className="w-24 font-bold text-slate-700">状态</TableHead>
+                    <TableHead className="w-32 font-bold text-slate-700">错误原因</TableHead>
+                    <TableHead className="w-24 font-bold text-slate-700">进度</TableHead>
+                    <TableHead className="w-24 font-bold text-slate-700">文件</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -781,92 +829,94 @@ export function VideoTaskBoard({
                       <TableRow
                         key={task.number}
                         className={cn(
-                          'text-sm',
-                          highlightSet.has(task.number) ? 'bg-indigo-50/70' : undefined,
+                          'text-sm border-b border-slate-100 hover:bg-slate-50/80 transition-colors',
+                          highlightSet.has(task.number) ? 'bg-gradient-to-r from-indigo-50/80 via-blue-50/60 to-indigo-50/80' : undefined,
                         )}
                       >
-                        <TableCell>
+                        <TableCell className="py-4">
                           <Checkbox
                             checked={selected.has(task.number)}
                             onCheckedChange={(checked) => handleSelect(task.number, Boolean(checked))}
                           />
                         </TableCell>
-                        <TableCell className="font-semibold text-slate-700">{task.number}</TableCell>
-                        <TableCell className="max-w-[180px]">
+                        <TableCell className="font-bold text-slate-800 py-4">
+                          <span className="px-2.5 py-1 bg-slate-100 rounded-md">{task.number}</span>
+                        </TableCell>
+                        <TableCell className="max-w-[180px] py-4">
                           {task.imageUrls?.[0] ? (
                             <span
-                              className="block truncate text-xs font-medium text-blue-600"
+                              className="block truncate text-xs font-semibold text-blue-600 bg-blue-50/50 px-2 py-1 rounded-md"
                               title={task.imageUrls[0]}
                             >
                               📷 {getDisplayValue(task.imageUrls[0])}
                             </span>
                           ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-slate-400">—</span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <span className="text-xs font-medium text-slate-600">{task.aspectRatio || '—'}</span>
+                        <TableCell className="py-4">
+                          <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">{task.aspectRatio || '—'}</span>
                         </TableCell>
-                        <TableCell className="max-w-[280px]">
+                        <TableCell className="max-w-[280px] py-4">
                           {editingPrompt?.number === task.number ? (
                             <Textarea
                               value={editingPrompt.value}
                               onChange={(event) => handlePromptChange(event.target.value)}
                               onBlur={handlePromptBlur}
                               onKeyDown={handlePromptKeyDown}
-                              rows={4}
+                              rows={6}
                               autoFocus
-                              className="text-xs"
+                              className="text-xs border-2 border-purple-300 focus:border-purple-500"
                               disabled={updatePromptMutation.isPending}
                             />
                           ) : (
                             <button
                               type="button"
-                              className="w-full text-left text-xs text-slate-600 whitespace-pre-wrap break-words"
+                              className="w-full text-left text-xs text-slate-700 hover:bg-slate-100 p-2 rounded-md transition-colors line-clamp-3"
                               title={task.prompt || '点击编辑提示词'}
                               onClick={() => startEditingPrompt(task)}
                             >
-                              {task.prompt || '—'}
+                              {task.prompt || <span className="text-slate-400">点击添加提示词</span>}
                             </button>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <Badge className={cn('font-medium text-xs', STATUS_COLOR[task.status] ?? 'bg-slate-100 text-slate-700')}>
+                        <TableCell className="py-4">
+                          <Badge className={cn('font-semibold text-xs px-3 py-1.5 rounded-lg', STATUS_COLOR[task.status] ?? 'bg-slate-100 text-slate-700')}>
                             {task.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="max-w-[220px]">
+                        <TableCell className="max-w-[220px] py-4">
                           {task.errorMsg ? (
                             <span
-                              className="block truncate text-xs text-rose-600"
+                              className="block truncate text-xs font-medium text-rose-700 bg-rose-50 px-2 py-1 rounded-md"
                               title={task.errorMsg}
                             >
-                              {task.errorMsg}
+                              ⚠️ {task.errorMsg}
                             </span>
                           ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-slate-400">—</span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Progress value={task.status === '成功' ? 100 : task.progress ?? 0} className="h-1.5" />
-                            <span className="text-xs text-muted-foreground">
-                              {task.status === '成功' ? '100%' : `${task.progress ?? 0}%`}
+                        <TableCell className="py-4">
+                          <div className="space-y-2">
+                            <Progress value={task.status === '成功' ? 100 : task.progress ?? 0} className="h-2" />
+                            <span className={cn('text-xs font-semibold', task.status === '成功' ? 'text-emerald-600' : 'text-slate-600')}>
+                              {task.status === '成功' ? '✓ 100%' : `${task.progress ?? 0}%`}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-[200px]">
+                        <TableCell className="py-4">
                           {task.localPath || task.remoteUrl ? (
                             <button
                               type="button"
-                              className="block truncate text-xs font-medium text-blue-600 underline-offset-2 hover:underline"
-                              title="点击查看视频所在文件夹"
+                              className="text-xs font-semibold text-blue-600 bg-blue-50/50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+                              title={`点击查看视频文件：${getDisplayValue(task.localPath ?? task.remoteUrl)}`}
                               onClick={() => handleOpenOutputLocation(task)}
                             >
-                              {getDisplayValue(task.localPath ?? task.remoteUrl)}
+                              📁 #{task.number}
                             </button>
                           ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-slate-400">—</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -878,22 +928,29 @@ export function VideoTaskBoard({
           </CardContent>
         </Card>
       ) : (
-        <Card className={cn(isEmbedded ? 'shadow-none border-0' : 'shadow-sm border border-slate-200')}>
-          <CardHeader className="space-y-4">
+        <Card className={cn(isEmbedded ? 'shadow-none border-0' : 'shadow-xl border-0 overflow-hidden bg-gradient-to-br from-white via-slate-50 to-white')}>
+          <CardHeader className="space-y-4 bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 border-b border-slate-200/50">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <CardTitle>新建图生视频任务</CardTitle>
-                <CardDescription>
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  ✨ 新建图生视频任务
+                </CardTitle>
+                <CardDescription className="text-base text-slate-600">
                   填写 Veo3 视频提示词与参考图，一个图片对应一个任务
                   {isSettingsLoading ? ' (正在读取默认设置...)' : ''}
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setActivePage('tasks')}>
-                返回任务列表
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActivePage('tasks')}
+                className="bg-white hover:bg-slate-50 border-slate-300 shadow-sm"
+              >
+                ← 返回任务列表
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-8">
             <div className="min-h-[500px]">
               <VideoTaskForm
                 key={formResetKey}
@@ -909,17 +966,19 @@ export function VideoTaskBoard({
         </Card>
       )}
       <Dialog open={isAspectDialogOpen} onOpenChange={handleAspectDialogOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-gradient-to-br from-white to-slate-50 border-0 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>批量修改画幅比例</DialogTitle>
-            <DialogDescription>
-              将对已选择的 {selectedNumbers.length} 个任务应用新的画幅比例，并清空对应生成结果。
+            <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              📐 批量修改画幅比例
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              将对已选择的 <span className="font-bold text-purple-600">{selectedNumbers.length}</span> 个任务应用新的画幅比例，并清空对应生成结果。
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
+          <div className="space-y-4 py-4">
+            <div className="space-y-3">
               <Select value={pendingAspectRatio} onValueChange={setPendingAspectRatio}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11 border-2 border-slate-200 hover:border-purple-300 transition-colors">
                   <SelectValue placeholder="选择画幅比例" />
                 </SelectTrigger>
                 <SelectContent>
@@ -931,19 +990,26 @@ export function VideoTaskBoard({
                 </SelectContent>
               </Select>
               {hasMixedSelectedAspectRatios ? (
-                <p className="text-xs text-amber-600">当前所选任务画幅不一致，默认使用设置中心中的画幅。</p>
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <span className="text-amber-600">⚠️</span>
+                  <p className="text-xs text-amber-700 leading-relaxed">当前所选任务画幅不一致，默认使用设置中心中的画幅。</p>
+                </div>
               ) : null}
-              <p className="text-xs text-slate-500">
-                更新画幅后，任务会重置为等待中状态，同时移除本地与远程的生成文件记录。
-              </p>
+              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <span className="text-blue-600">ℹ️</span>
+                <p className="text-xs text-blue-700 leading-relaxed">
+                  更新画幅后，任务会重置为等待中状态，同时移除本地与远程的生成文件记录。
+                </p>
+              </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="ghost"
               onClick={() => handleAspectDialogOpenChange(false)}
               disabled={updateAspectRatioMutation.isPending}
+              className="hover:bg-slate-100"
             >
               取消
             </Button>
@@ -952,12 +1018,13 @@ export function VideoTaskBoard({
               variant="secondary"
               onClick={() => handleAspectRatioSubmit('update')}
               disabled={updateAspectRatioMutation.isPending}
+              className="bg-slate-100 hover:bg-slate-200"
             >
               更新画幅
             </Button>
             <Button
               type="button"
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg"
               onClick={() => handleAspectRatioSubmit('update-and-regenerate')}
               disabled={updateAspectRatioMutation.isPending}
             >

@@ -51,7 +51,7 @@ export function MainDashboard() {
       <TopNav />
       <LeftPanel activeTab={activeTab} onTabChange={handleTabChange} />
 
-      <main className="ml-[300px] mt-14 min-h-[calc(100vh-3.5rem)] pb-16">
+      <main className="ml-[200px] mt-14 min-h-[calc(100vh-3.5rem)] pb-16">
         <div className="h-full space-y-6 p-6">
           {activeTab === 'text-to-image' && (
             <div className="space-y-6">
