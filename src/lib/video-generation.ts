@@ -10,6 +10,25 @@ import { presetA } from '@/providers/video/kieVeo3.presetA';
 import { presetB } from '@/providers/video/kieVeo3.presetB';
 import type { BaseTask } from '@/lib/jobs/types/job';
 
+type FailedTaskSummary = {
+  number: string;
+  status: string;
+  error: string;
+};
+
+export type GenerateVideosResult =
+  | {
+      success: true;
+      succeeded: string[];
+      message?: string;
+      failed?: FailedTaskSummary[];
+    }
+  | {
+      success: false;
+      message: string;
+      failed?: FailedTaskSummary[];
+    };
+
 type ProviderKey = 'kie-veo3-fast' | 'yunwu-veo3-fast' | 'yunwu-veo3.1-fast' | 'yunwu-sora2';
 
 interface GenerateVideosPayload {
@@ -43,7 +62,11 @@ async function handleTaskUpdate(baseTask: BaseTask) {
 
 const SUPPORTED_PROVIDERS: ProviderKey[] = ['kie-veo3-fast', 'yunwu-veo3-fast', 'yunwu-veo3.1-fast', 'yunwu-sora2'];
 
-export async function generateVideos({ numbers, workflow = 'A', provider: requestedProvider }: GenerateVideosPayload) {
+export async function generateVideos({
+  numbers,
+  workflow = 'A',
+  provider: requestedProvider,
+}: GenerateVideosPayload): Promise<GenerateVideosResult> {
   const providerKey: ProviderKey = SUPPORTED_PROVIDERS.includes(requestedProvider as ProviderKey)
     ? (requestedProvider as ProviderKey)
     : 'kie-veo3-fast';
@@ -168,8 +191,16 @@ export async function generateVideos({ numbers, workflow = 'A', provider: reques
       success: true,
       message: `部分视频任务失败 (${failedTasks.length}/${finalTasks.length})`,
       failed: failedDetails,
+      // 返回成功任务编号列表，方便终端日志记录。
+      succeeded: succeededTasks.map((task) => task.id),
     };
   }
 
-  return { success: true };
+  // 仅收集成功任务编号，供日志或上游消费。
+  const succeededNumbers = succeededTasks.map((task) => task.id);
+
+  return {
+    success: true,
+    succeeded: succeededNumbers,
+  };
 }

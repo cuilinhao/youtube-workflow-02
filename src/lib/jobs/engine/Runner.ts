@@ -88,6 +88,17 @@ export class Runner {
         return;
       } catch (error) {
         lastError = error as Error;
+        // 输出原始错误内容，确保云雾 / KIE 返回的详细报错（如 503 无可用渠道）直接出现在终端。
+        if (lastError instanceof Error) {
+          console.error('[VideoRunner] 原始错误详情', {
+            taskId: task.id,
+            attempt,
+            message: lastError.message,
+            stack: lastError.stack,
+          });
+        } else {
+          console.error('[VideoRunner] 原始错误详情', { taskId: task.id, attempt, error: lastError });
+        }
         const isRateLimit = this.isRateLimitError(error);
         const delay = isRateLimit
           ? Math.max(this.batchDelayMs, DEFAULT_RATE_LIMIT_DELAY)

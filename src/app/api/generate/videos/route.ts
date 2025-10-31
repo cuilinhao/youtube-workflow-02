@@ -18,6 +18,23 @@ export async function POST(request: Request) {
       referer: request.headers.get('referer') ?? 'unknown',
     });
     const result = await generateVideos({ numbers: body.numbers, provider: body.provider });
+    if (!result.success && Array.isArray(result.failed) && result.failed.length) {
+      // 单独输出失败任务的编号与失败原因，便于快速排查。
+      for (const item of result.failed) {
+        console.warn('[视频生成API] 失败任务详情', {
+          number: item?.number ?? 'unknown',
+          status: item?.status ?? 'unknown',
+          error: item?.error ?? '未知错误',
+        });
+      }
+    } else if (result.success) {
+      const succeeded = Array.isArray(result.succeeded) ? result.succeeded : [];
+      // 成功时打印生成完成的任务编号，便于快速定位成果。
+      console.info('[视频生成API] 成功任务', {
+        count: succeeded.length,
+        numbers: succeeded,
+      });
+    }
     console.log('[视频生成API] 响应结果', {
       durationMs: Date.now() - startedAt.getTime(),
       result,
