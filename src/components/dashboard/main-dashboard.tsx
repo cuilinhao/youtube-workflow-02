@@ -47,11 +47,11 @@ export function MainDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#0f0f0f]">
       <TopNav />
       <LeftPanel activeTab={activeTab} onTabChange={handleTabChange} />
 
-      <main className="ml-[200px] mt-14 min-h-[calc(100vh-3.5rem)] pb-16">
+      <main className="ml-[240px] mt-14 min-h-[calc(100vh-3.5rem)] pb-16 bg-gradient-to-br from-gray-50 via-white to-gray-50">
         <div className="h-full space-y-6 p-6">
           {activeTab === 'text-to-image' && (
             <div className="space-y-6">

@@ -706,22 +706,27 @@ export function VideoTaskForm({
   return (
     <div className="flex h-full flex-col">
       <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg bg-gradient-to-br from-white to-slate-50 border-0 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>粘贴提示词</DialogTitle>
-            <DialogDescription>每行一个提示词，将按照顺序填充到对应的任务行。</DialogDescription>
+            <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              📝 粘贴提示词
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              每行一个提示词，将按照顺序填充到对应的任务行。
+            </DialogDescription>
           </DialogHeader>
           <Textarea
             value={promptBulkInput}
             onChange={(event) => setPromptBulkInput(event.target.value)}
             placeholder={`请粘贴提示词，每行一个。\n例如：\n女孩开心地笑了\n男孩在公园里跑步\n夕阳下的海滩风景`}
             rows={8}
+            className="border-2 border-slate-200 focus:border-purple-400"
           />
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setPromptBulkInput('')}>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="ghost" onClick={() => setPromptBulkInput('')} className="hover:bg-slate-100">
               清空
             </Button>
-            <Button type="button" onClick={handleBulkPromptApply}>
+            <Button type="button" onClick={handleBulkPromptApply} className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg">
               粘贴提示词
             </Button>
           </DialogFooter>
@@ -756,9 +761,9 @@ export function VideoTaskForm({
       />
       <ScrollArea className="flex-1 pr-4">
         <div className="space-y-6">
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <Label className="text-base font-semibold">参考图与提示词</Label>
+              <Label className="text-lg font-bold text-slate-800">📷 参考图与提示词</Label>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
@@ -766,8 +771,9 @@ export function VideoTaskForm({
                   size="sm"
                   onClick={handleFolderButtonClick}
                   disabled={disableUpload || isUploadingImages}
+                  className="bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-all shadow-sm"
                 >
-                  <FolderUpIcon className="mr-2 h-4 w-4" /> 上传参考图文件夹
+                  <FolderUpIcon className="mr-1.5 h-3.5 w-3.5" /> 上传文件夹
                 </Button>
                 <Button
                   type="button"
@@ -775,8 +781,9 @@ export function VideoTaskForm({
                   size="sm"
                   onClick={handleSingleImageButtonClick}
                   disabled={disableUpload || isUploadingImages}
+                  className="bg-white hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-all shadow-sm"
                 >
-                  <ImagePlus className="mr-2 h-4 w-4" /> 添加多张图片
+                  <ImagePlus className="mr-1.5 h-3.5 w-3.5" /> 添加图片
                 </Button>
                 <Button
                   type="button"
@@ -784,28 +791,33 @@ export function VideoTaskForm({
                   size="sm"
                   onClick={handleCsvButtonClick}
                   disabled={disableUpload}
+                  className="bg-white hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300 transition-all shadow-sm"
                 >
-                  <FileSpreadsheet className="mr-2 h-4 w-4" /> 批量添加图生视频 CSV
+                  <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" /> CSV
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setPromptDialogOpen(true)}
+                  className="bg-white hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 transition-all shadow-sm"
                 >
-                  <ClipboardList className="mr-2 h-4 w-4" /> 粘贴提示词
+                  <ClipboardList className="mr-1.5 h-3.5 w-3.5" /> 粘贴提示词
                 </Button>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              一行对应一张参考图与提示词，支持本地路径或在线 URL；若使用云雾 Sora 2，可只填写提示词。
-            </p>
+            <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-blue-600">ℹ️</span>
+              <p className="text-xs text-blue-700 leading-relaxed">
+                一行对应一张参考图与提示词，支持本地路径或在线 URL；若使用云雾 Sora 2，可只填写提示词。
+              </p>
+            </div>
 
             <div
               className={cn(
-                'relative rounded-md border border-slate-200 transition-colors',
+                'relative rounded-xl border-2 border-slate-200 transition-all shadow-sm overflow-hidden',
                 (disableUpload || isUploadingImages) && 'opacity-70',
-                isDragOver && 'border-dashed border-purple-500 bg-purple-50/70',
+                isDragOver && 'border-dashed border-purple-400 bg-purple-50/70 shadow-lg',
               )}
               onDragEnter={handleDragEnter}
               onDragOver={handleDragOver}
@@ -813,17 +825,17 @@ export function VideoTaskForm({
               onDrop={handleDrop}
             >
               {isDragOver ? (
-                <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-md bg-purple-50/80 text-sm font-medium text-purple-700">
-                  <ImagePlus className="h-6 w-6" />
-                  拖拽的图片松手即可上传（支持多张）
+                <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-gradient-to-br from-purple-50 to-blue-50 backdrop-blur-sm">
+                  <ImagePlus className="h-8 w-8 text-purple-600" />
+                  <span className="text-base font-bold text-purple-700">松手即可上传图片（支持多张）</span>
                 </div>
               ) : null}
               <Table className={cn('relative transition-opacity', isDragOver && 'opacity-40')}>
                 <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="w-16 text-center">序号</TableHead>
-                    <TableHead className="w-[40%]">图片路径</TableHead>
-                    <TableHead>提示词</TableHead>
+                  <TableRow className="bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 border-b-2 border-slate-200">
+                    <TableHead className="w-16 text-center font-bold text-slate-700">序号</TableHead>
+                    <TableHead className="w-[40%] font-bold text-slate-700">图片路径</TableHead>
+                    <TableHead className="font-bold text-slate-700">提示词</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -896,39 +908,53 @@ export function VideoTaskForm({
           </div>
 
           {imageUploads.length > 0 && (
-            <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-medium text-slate-600">上传进度</p>
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-600">
-                  <span>总进度</span>
-                  <span className="text-slate-500">
-                    完成 {uploadSummary.successCount}/{imageUploads.length}
-                    {uploadSummary.errorCount ? ` · 失败 ${uploadSummary.errorCount}` : ''} · {uploadSummary.progress}%
-                  </span>
+            <div className="space-y-4 rounded-2xl border-2 border-slate-200 bg-gradient-to-br from-white via-slate-50 to-white p-5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg">
+                  <ImagePlus className="h-4 w-4 text-purple-600" />
                 </div>
-                <Progress value={uploadSummary.progress} className="h-2" />
+                <p className="text-sm font-bold text-slate-800">上传进度</p>
+              </div>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-slate-700">总进度</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-emerald-700">
+                      完成 {uploadSummary.successCount}/{imageUploads.length}
+                    </span>
+                    {uploadSummary.errorCount > 0 && (
+                      <span className="text-xs font-semibold text-rose-700">
+                        失败 {uploadSummary.errorCount}
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs font-bold rounded-md">
+                      {uploadSummary.progress}%
+                    </span>
+                  </div>
+                </div>
+                <Progress value={uploadSummary.progress} className="h-3" />
               </div>
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {imageUploads.map((item) => (
-                  <div key={item.id} className="space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <span className="font-medium text-slate-700 truncate max-w-[240px]" title={item.name}>
-                        {item.name}
+                  <div key={item.id} className="space-y-2 p-3 bg-white rounded-lg border border-slate-200">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-700 truncate max-w-[240px] text-xs" title={item.name}>
+                        📷 {item.name}
                       </span>
                       <span
                         className={cn(
-                          'whitespace-nowrap rounded px-1.5 py-0.5 font-medium',
+                          'whitespace-nowrap rounded-lg px-2.5 py-1 font-bold text-xs',
                           item.status === 'success'
-                            ? 'bg-emerald-100 text-emerald-700'
+                            ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white'
                             : item.status === 'error'
-                              ? 'bg-rose-100 text-rose-700'
-                              : 'bg-sky-100 text-sky-700',
+                              ? 'bg-gradient-to-r from-rose-500 to-red-500 text-white'
+                              : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white',
                         )}
                       >
-                        {item.status === 'success' ? '成功' : item.status === 'error' ? '失败' : '上传中'}
+                        {item.status === 'success' ? '✓ 成功' : item.status === 'error' ? '✗ 失败' : '⟳ 上传中'}
                       </span>
                     </div>
-                    <Progress value={item.progress} className="h-1.5" />
+                    <Progress value={item.progress} className="h-2" />
                     {item.url ? (
                       <div className="text-xs" title={item.url}>
                         <span className="text-slate-500">
@@ -936,7 +962,7 @@ export function VideoTaskForm({
                         </span>
                       </div>
                     ) : null}
-                    {item.error ? <p className="text-xs text-rose-600">{item.error}</p> : null}
+                    {item.error ? <p className="text-xs font-medium text-rose-600">⚠️ {item.error}</p> : null}
                   </div>
                 ))}
               </div>
