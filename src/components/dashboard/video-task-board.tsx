@@ -14,14 +14,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,6 +25,10 @@ import { cn } from '@/lib/utils';
 import { VIDEO_ASPECT_RATIO_OPTIONS } from '@/constants/video';
 import { VideoTaskForm, VideoTaskFormSubmitPayload, createEmptyVideoTaskDraft } from './video-task-form';
 
+/**
+ * 状态颜色配置
+ * 为不同的任务状态定义渐变色样式，增强视觉效果
+ */
 const STATUS_COLOR: Record<string, string> = {
   等待中: 'bg-gradient-to-r from-slate-50 to-slate-100 text-slate-700 border border-slate-300 shadow-sm',
   生成中: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 shadow-md animate-pulse',
@@ -42,6 +38,10 @@ const STATUS_COLOR: Record<string, string> = {
   提交中: 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white border-0 shadow-md',
 };
 
+/**
+ * 视频生成服务商选项配置
+ * 支持多个AI视频生成平台
+ */
 const VIDEO_PROVIDER_OPTIONS = [
   { value: 'kie-veo3-fast', label: 'KIE · Veo3 Fast' },
   { value: 'yunwu-veo3-fast', label: '云雾 · Veo3 Fast' },
@@ -51,6 +51,14 @@ const VIDEO_PROVIDER_OPTIONS = [
 
 type VideoProviderOption = (typeof VIDEO_PROVIDER_OPTIONS)[number]['value'];
 
+/**
+ * VideoTaskBoard 组件属性接口
+ * @property {string} variant - 显示变体：'default' 或 'embedded'
+ * @property {boolean} showCreateButton - 是否显示创建任务按钮
+ * @property {boolean} showGenerateButton - 是否显示生成视频按钮
+ * @property {string[]} highlightNumbers - 需要高亮显示的任务编号列表
+ * @property {string} className - 自定义CSS类名
+ */
 interface VideoTaskBoardProps {
   variant?: 'default' | 'embedded';
   showCreateButton?: boolean;
@@ -59,42 +67,73 @@ interface VideoTaskBoardProps {
   className?: string;
 }
 
+/**
+ * 更新画幅比例的参数接口
+ */
 interface UpdateAspectRatioVariables {
-  numbers: string[];
-  aspectRatio: string;
-  regenerate?: boolean;
+  numbers: string[]; // 要更新的任务编号列表
+  aspectRatio: string; // 新的画幅比例
+  regenerate?: boolean; // 是否重新生成视频
 }
 
+/**
+ * 从URL或路径中提取文件名
+ * @param {string} raw - 原始URL或路径字符串
+ * @returns {string} 提取的文件名
+ */
 function getFileName(raw?: string | null) {
   if (!raw) return '';
 
   try {
+    // 尝试作为URL解析
     const parsed = new URL(raw);
     const decodedPath = decodeURIComponent(parsed.pathname);
     const segments = decodedPath.split('/').filter(Boolean);
     if (segments.length) return segments[segments.length - 1];
   } catch {
-    // Not a valid URL, fall back to path-style parsing
+    // 如果不是有效URL，则按路径方式解析
   }
 
   const parts = raw.split(/[\\/]/).filter(Boolean);
   return parts.length ? parts[parts.length - 1] : raw;
 }
 
+/**
+ * 获取用于显示的文件名或默认值
+ * @param {string} raw - 原始URL或路径字符串
+ * @returns {string} 显示用的文件名或"—"
+ */
 function getDisplayValue(raw?: string | null) {
   if (!raw) return '—';
   const name = getFileName(raw);
   return name || raw;
 }
 
+/**
+ * 从完整路径中提取目录路径
+ * @param {string} raw - 原始路径字符串
+ * @returns {string} 目录路径
+ */
 function getDirectoryPath(raw?: string | null) {
   if (!raw) return '';
   const normalized = raw.replace(/\\/g, '/');
   const segments = normalized.split('/');
-  segments.pop();
+  segments.pop(); // 移除文件名
   return segments.join('/');
 }
 
+/**
+ * 批量图生视频任务看板组件
+ *
+ * 功能特性：
+ * - 展示视频任务列表，支持选择、删除、批量操作
+ * - 显示任务状态、进度、错误信息
+ * - 支持修改画幅比例、重新生成视频
+ * - 右侧预览区域展示已生成的视频，支持点击播放
+ * - 自动轮询更新正在生成的任务状态
+ *
+ * @param {VideoTaskBoardProps} props - 组件属性
+ */
 export function VideoTaskBoard({
   variant = 'default',
   showCreateButton = true,
@@ -103,6 +142,8 @@ export function VideoTaskBoard({
   className,
 }: VideoTaskBoardProps = {}) {
   const queryClient = useQueryClient();
+
+  // 获取视频任务列表数据，对于正在生成的任务每5秒自动刷新
   const { data: videoData, isLoading } = useQuery({
     queryKey: ['video-tasks'],
     queryFn: api.getVideoTasks,
@@ -119,19 +160,32 @@ export function VideoTaskBoard({
     queryFn: api.getSettings,
   });
 
+  // 从查询结果中提取视频任务列表
   const videoTasks = useMemo(() => videoData?.videoTasks ?? [], [videoData]);
+
+  // 选中的任务编号集合，用于批量操作
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // 正在编辑的提示词状态
   const [editingPrompt, setEditingPrompt] = useState<
     | {
-        number: string;
-        value: string;
-        original: string;
+        number: string; // 任务编号
+        value: string; // 当前编辑值
+        original: string; // 原始值
       }
     | null
   >(null);
+
+  // 提示词编辑取消标记（用于处理失焦事件）
   const promptCancelRef = useRef(false);
+
+  // 是否正在选择输出文件夹
   const [isSelectingOutput, setIsSelectingOutput] = useState(false);
+
+  // 画幅比例修改对话框状态
   const [isAspectDialogOpen, setIsAspectDialogOpen] = useState(false);
+
+  // 待应用的画幅比例
   const [pendingAspectRatio, setPendingAspectRatio] = useState('');
 
   const initialFormValues = useMemo(
@@ -160,10 +214,15 @@ export function VideoTaskBoard({
 
   const containerClassName = cn('space-y-6', isEmbedded && 'space-y-4', className);
 
+  /**
+   * 添加视频任务的 mutation
+   * 逐个创建视频任务，并在全部完成后刷新任务列表
+   */
   const addTaskMutation = useMutation({
     mutationFn: async (payload: VideoTaskFormSubmitPayload) => {
       const results: Awaited<ReturnType<typeof api.addVideoTask>>[] = [];
 
+      // 遍历所有任务行，逐个创建任务
       for (let index = 0; index < payload.rows.length; index += 1) {
         const row = payload.rows[index];
         const imageUrls = row.imageUrl ? [row.imageUrl] : [];
@@ -189,8 +248,10 @@ export function VideoTaskBoard({
     onSuccess: async (results) => {
       const count = results?.length || 0;
       toast.success(`已添加 ${count} 个视频任务`);
+      // 刷新任务列表
       await queryClient.invalidateQueries({ queryKey: ['video-tasks'] });
       await queryClient.refetchQueries({ queryKey: ['video-tasks'], type: 'active' });
+      // 重置表单并返回任务列表页面
       setFormResetKey((prev) => prev + 1);
       setActivePage('tasks');
     },
@@ -627,6 +688,9 @@ export function VideoTaskBoard({
     addTaskMutation.mutate(payload);
   };
 
+  // 视频播放状态 - 记录当前正在播放的视频任务编号
+  const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+
   return (
     <div className={containerClassName}>
       {activePage === 'tasks' ? (
@@ -794,136 +858,214 @@ export function VideoTaskBoard({
               </div>
             </div>
 
-            <ScrollArea className="h-[500px] rounded-xl border border-slate-200/60 shadow-sm bg-white">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 border-b-2 border-slate-200">
-                    <TableHead className="w-12 font-bold text-slate-700">选择</TableHead>
-                    <TableHead className="w-16 font-bold text-slate-700">编号</TableHead>
-                    <TableHead className="w-36 font-bold text-slate-700">参考图</TableHead>
-                    <TableHead className="w-24 font-bold text-slate-700">画幅</TableHead>
-                    <TableHead className="font-bold text-slate-700">提示词</TableHead>
-                    <TableHead className="w-24 font-bold text-slate-700">状态</TableHead>
-                    <TableHead className="w-32 font-bold text-slate-700">错误原因</TableHead>
-                    <TableHead className="w-24 font-bold text-slate-700">进度</TableHead>
-                    <TableHead className="w-24 font-bold text-slate-700">文件</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                        正在加载视频任务...
-                      </TableCell>
-                    </TableRow>
-                  ) : !sortedTasks.length ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                        {showCreateButton
-                          ? '暂无视频任务，请点击右上角的“添加任务”。'
-                          : '暂无视频任务，请先通过工作流批量上传并生成任务。'}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    sortedTasks.map((task) => (
-                      <TableRow
+            {/* 任务卡片列表 - 可滚动展示 */}
+            <ScrollArea className="h-[600px]">
+              <div className="space-y-4 pr-4">
+                {/* 加载状态 */}
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                    <FilmIcon className="h-16 w-16 mb-4 opacity-20 animate-pulse" />
+                    <p className="text-sm">正在加载视频任务...</p>
+                  </div>
+                ) : !sortedTasks.length ? (
+                  /* 空状态 */
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                    <FilmIcon className="h-16 w-16 mb-4 opacity-20" />
+                    <p className="text-sm">
+                      {showCreateButton
+                        ? '暂无视频任务，请点击右上角的"添加任务"。'
+                        : '暂无视频任务，请先通过工作流批量上传并生成任务。'}
+                    </p>
+                  </div>
+                ) : (
+                  /* 任务卡片列表 - 每个卡片包含视频预览、任务信息、状态等 */
+                  sortedTasks.map((task) => {
+                    // 获取视频URL（优先使用远程URL，因为本地路径无法在浏览器播放）
+                    const videoUrl = task.remoteUrl || task.localPath;
+                    // 判断当前是否正在播放该视频
+                    const isPlaying = playingVideo === task.number;
+                    // 检查是否是可播放的HTTP URL
+                    const isPlayableUrl = videoUrl && /^https?:\/\//i.test(videoUrl);
+                    // 判断是否有可播放的视频（状态为成功且有可播放URL）
+                    const hasVideo = task.status === '成功' && isPlayableUrl;
+
+                    return (
+                      <div
                         key={task.number}
                         className={cn(
-                          'text-sm border-b border-slate-100 hover:bg-slate-50/80 transition-colors',
-                          highlightSet.has(task.number) ? 'bg-gradient-to-r from-indigo-50/80 via-blue-50/60 to-indigo-50/80' : undefined,
+                          'group relative rounded-2xl border-2 overflow-hidden transition-all duration-200 bg-white',
+                          highlightSet.has(task.number)
+                            ? 'border-purple-400 shadow-lg shadow-purple-200'
+                            : 'border-slate-200 hover:border-slate-300 hover:shadow-md',
                         )}
                       >
-                        <TableCell className="py-4">
-                          <Checkbox
-                            checked={selected.has(task.number)}
-                            onCheckedChange={(checked) => handleSelect(task.number, Boolean(checked))}
-                          />
-                        </TableCell>
-                        <TableCell className="font-bold text-slate-800 py-4">
-                          <span className="px-2.5 py-1 bg-slate-100 rounded-md">{task.number}</span>
-                        </TableCell>
-                        <TableCell className="max-w-[180px] py-4">
-                          {task.imageUrls?.[0] ? (
-                            <span
-                              className="block truncate text-xs font-semibold text-blue-600 bg-blue-50/50 px-2 py-1 rounded-md"
-                              title={task.imageUrls[0]}
-                            >
-                              📷 {getDisplayValue(task.imageUrls[0])}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">{task.aspectRatio || '—'}</span>
-                        </TableCell>
-                        <TableCell className="max-w-[280px] py-4">
-                          {editingPrompt?.number === task.number ? (
-                            <Textarea
-                              value={editingPrompt.value}
-                              onChange={(event) => handlePromptChange(event.target.value)}
-                              onBlur={handlePromptBlur}
-                              onKeyDown={handlePromptKeyDown}
-                              rows={6}
-                              autoFocus
-                              className="text-xs border-2 border-purple-300 focus:border-purple-500"
-                              disabled={updatePromptMutation.isPending}
+                        {/* 任务卡片网格布局 */}
+                        <div className="grid grid-cols-[auto_1fr_auto] gap-4 p-4">
+                          {/* 左侧：选择框和编号 */}
+                          <div className="flex flex-col items-center gap-3">
+                            <Checkbox
+                              checked={selected.has(task.number)}
+                              onCheckedChange={(checked) => handleSelect(task.number, Boolean(checked))}
+                              className="mt-1"
                             />
-                          ) : (
-                            <button
-                              type="button"
-                              className="w-full text-left text-xs text-slate-700 hover:bg-slate-100 p-2 rounded-md transition-colors line-clamp-3"
-                              title={task.prompt || '点击编辑提示词'}
-                              onClick={() => startEditingPrompt(task)}
-                            >
-                              {task.prompt || <span className="text-slate-400">点击添加提示词</span>}
-                            </button>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <Badge className={cn('font-semibold text-xs px-3 py-1.5 rounded-lg', STATUS_COLOR[task.status] ?? 'bg-slate-100 text-slate-700')}>
-                            {task.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="max-w-[220px] py-4">
-                          {task.errorMsg ? (
-                            <span
-                              className="block truncate text-xs font-medium text-rose-700 bg-rose-50 px-2 py-1 rounded-md"
-                              title={task.errorMsg}
-                            >
-                              ⚠️ {task.errorMsg}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="space-y-2">
-                            <Progress value={task.status === '成功' ? 100 : task.progress ?? 0} className="h-2" />
-                            <span className={cn('text-xs font-semibold', task.status === '成功' ? 'text-emerald-600' : 'text-slate-600')}>
-                              {task.status === '成功' ? '✓ 100%' : `${task.progress ?? 0}%`}
-                            </span>
+                            <div className="px-3 py-1.5 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg">
+                              <span className="text-sm font-bold text-slate-800">{task.number}</span>
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          {task.localPath || task.remoteUrl ? (
-                            <button
-                              type="button"
-                              className="text-xs font-semibold text-blue-600 bg-blue-50/50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-                              title={`点击查看视频文件：${getDisplayValue(task.localPath ?? task.remoteUrl)}`}
-                              onClick={() => handleOpenOutputLocation(task)}
+
+                          {/* 中间：视频预览和任务信息 */}
+                          <div className="grid grid-cols-[300px_1fr] gap-4">
+                            {/* 视频预览区 */}
+                            <div
+                              className={cn(
+                                'relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer',
+                                isPlaying
+                                  ? 'border-purple-500 shadow-lg shadow-purple-500/30'
+                                  : 'border-slate-200 hover:border-purple-300',
+                              )}
+                              onClick={() => {
+                                if (hasVideo) {
+                                  console.log('[VideoTaskBoard] 点击播放视频', {
+                                    number: task.number,
+                                    videoUrl,
+                                    localPath: task.localPath,
+                                    remoteUrl: task.remoteUrl
+                                  });
+                                  setPlayingVideo(isPlaying ? null : task.number);
+                                }
+                              }}
                             >
-                              📁 #{task.number}
-                            </button>
-                          ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                              <div className="relative aspect-video bg-gradient-to-br from-slate-900 to-slate-800">
+                                {isPlaying && videoUrl ? (
+                                  /* 视频播放器 */
+                                  <video
+                                    src={videoUrl}
+                                    controls
+                                    autoPlay
+                                    loop
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                      console.error('[VideoTaskBoard] 视频加载失败', {
+                                        number: task.number,
+                                        videoUrl,
+                                        error: e,
+                                      });
+                                      toast.error(`视频 #${task.number} 加载失败，请检查文件路径`);
+                                    }}
+                                    onLoadedData={() => {
+                                      console.log('[VideoTaskBoard] 视频加载成功', { number: task.number, videoUrl });
+                                    }}
+                                  />
+                                ) : (
+                                  <>
+                                    {/* 占位图片 */}
+                                    <img
+                                      src="/aaa.jpg"
+                                      alt="视频预览"
+                                      className="w-full h-full object-cover"
+                                    />
+                                    {/* 播放按钮遮罩（仅成功的视频显示） */}
+                                    {hasVideo && (
+                                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                          <PlayCircleIcon className="h-8 w-8 text-white" />
+                                        </div>
+                                      </div>
+                                    )}
+                                    {/* 右上角AI生成标签 */}
+                                    {hasVideo && (
+                                      <div className="absolute top-2 right-2 px-2.5 py-1 bg-black/80 backdrop-blur-sm rounded-lg text-xs font-bold text-white">
+                                        AI生成
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 任务详细信息 */}
+                            <div className="space-y-3">
+                              {/* 画幅比例 */}
+                              <div className="flex items-center gap-2">
+                                <CropIcon className="h-4 w-4 text-slate-500" />
+                                <span className="text-sm font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">
+                                  {task.aspectRatio || '9:16'}
+                                </span>
+                              </div>
+
+                              {/* 提示词编辑区 */}
+                              <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-600">提示词</label>
+                                {editingPrompt?.number === task.number ? (
+                                  <Textarea
+                                    value={editingPrompt.value}
+                                    onChange={(event) => handlePromptChange(event.target.value)}
+                                    onBlur={handlePromptBlur}
+                                    onKeyDown={handlePromptKeyDown}
+                                    rows={4}
+                                    autoFocus
+                                    className="text-sm border-2 border-purple-300 focus:border-purple-500"
+                                    disabled={updatePromptMutation.isPending}
+                                  />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="w-full text-left text-sm text-slate-700 hover:bg-slate-100 p-3 rounded-lg transition-colors line-clamp-3 leading-relaxed"
+                                    title={task.prompt || '点击编辑提示词'}
+                                    onClick={() => startEditingPrompt(task)}
+                                  >
+                                    {task.prompt || <span className="text-slate-400">点击添加提示词</span>}
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* 错误信息（如果有）*/}
+                              {task.errorMsg && (
+                                <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-lg">
+                                  <span className="text-rose-600 text-sm">⚠️</span>
+                                  <p className="text-xs text-rose-700 leading-relaxed flex-1" title={task.errorMsg}>
+                                    {task.errorMsg}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 右侧：状态和进度 */}
+                          <div className="flex flex-col items-end gap-3">
+                            {/* 状态徽章 */}
+                            <Badge className={cn('font-semibold text-xs px-4 py-2 rounded-xl', STATUS_COLOR[task.status] ?? 'bg-slate-100 text-slate-700')}>
+                              {task.status}
+                            </Badge>
+
+                            {/* 进度条 */}
+                            <div className="w-24 space-y-2">
+                              <Progress value={task.status === '成功' ? 100 : task.progress ?? 0} className="h-2" />
+                              <div className="text-center">
+                                <span className={cn('text-xs font-bold', task.status === '成功' ? 'text-emerald-600' : 'text-slate-600')}>
+                                  {task.status === '成功' ? '✓ 100%' : `${task.progress ?? 0}%`}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 查看文件按钮 */}
+                            {(task.localPath || task.remoteUrl) && (
+                              <button
+                                type="button"
+                                className="text-xs font-semibold text-blue-600 bg-blue-50/50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors"
+                                title={`点击查看视频文件：${getDisplayValue(task.localPath ?? task.remoteUrl)}`}
+                                onClick={() => handleOpenOutputLocation(task)}
+                              >
+                                📁 查看文件
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </ScrollArea>
           </CardContent>
         </Card>
