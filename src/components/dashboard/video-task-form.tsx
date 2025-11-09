@@ -720,7 +720,7 @@ export function VideoTaskForm({
             onChange={(event) => setPromptBulkInput(event.target.value)}
             placeholder={`请粘贴提示词，每行一个。\n例如：\n女孩开心地笑了\n男孩在公园里跑步\n夕阳下的海滩风景`}
             rows={8}
-            className="border-2 border-slate-200 focus:border-purple-400"
+            className="border-2 border-slate-200 focus:border-purple-400 max-h-64 overflow-y-auto resize-none"
           />
           <DialogFooter className="gap-2">
             <Button type="button" variant="ghost" onClick={() => setPromptBulkInput('')} className="hover:bg-slate-100">
