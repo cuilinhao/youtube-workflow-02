@@ -512,6 +512,15 @@ export function VideoTaskBoard({
     generateMutation.mutate({ numbers, provider: selectedProvider });
   };
 
+  const handleRegenerateTask = (task: VideoTask) => {
+    if (resetTasksMutation.isPending) return;
+    if (['生成中', '下载中', '提交中'].includes(task.status)) {
+      toast.info('任务正在处理中，请稍后再试');
+      return;
+    }
+    resetTasksMutation.mutate([task]);
+  };
+
   const handleRegenerateSelected = () => {
     if (!selectedNumbers.length) {
       toast.warning('请先选择要重新生成的任务');
@@ -1048,16 +1057,30 @@ export function VideoTaskBoard({
                               </div>
                             </div>
 
-                            {/* 查看文件按钮 */}
+                            {/* 查看文件 & 重新生成 */}
                             {(task.localPath || task.remoteUrl) && (
-                              <button
-                                type="button"
-                                className="text-xs font-semibold text-blue-600 bg-blue-50/50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors"
-                                title={`点击查看视频文件：${getDisplayValue(task.localPath ?? task.remoteUrl)}`}
-                                onClick={() => handleOpenOutputLocation(task)}
-                              >
-                                📁 查看文件
-                              </button>
+                              <div className="flex flex-col items-end gap-2 w-full">
+                                <button
+                                  type="button"
+                                  className="text-xs font-semibold text-blue-600 bg-blue-50/50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors"
+                                  title={`点击查看视频文件：${getDisplayValue(task.localPath ?? task.remoteUrl)}`}
+                                  onClick={() => handleOpenOutputLocation(task)}
+                                >
+                                  📁 查看文件
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs font-semibold text-purple-600 bg-purple-50/60 px-4 py-2 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                  title="重新生成该视频任务"
+                                  onClick={() => handleRegenerateTask(task)}
+                                  disabled={resetTasksMutation.isPending}
+                                >
+                                  <span className="inline-flex items-center gap-1">
+                                    <RotateCcwIcon className="h-3.5 w-3.5" />
+                                    重新生成视频
+                                  </span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
