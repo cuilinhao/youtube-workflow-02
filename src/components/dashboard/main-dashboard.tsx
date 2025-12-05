@@ -31,6 +31,7 @@ export function MainDashboard() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('text-to-image');
 
   useEffect(() => {
+    if (!searchParams) return;
     const tabParam = searchParams.get('tab');
     if (tabParam && isDashboardTab(tabParam) && tabParam !== activeTab) {
       setActiveTab(tabParam);
@@ -38,6 +39,7 @@ export function MainDashboard() {
   }, [searchParams, activeTab]);
 
   const handleTabChange = (tab: DashboardTab) => {
+    if (!searchParams) return;
     setActiveTab(tab);
     const current = searchParams.get('tab');
     if (current === tab) return;

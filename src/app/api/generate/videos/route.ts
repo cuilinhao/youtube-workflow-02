@@ -1,6 +1,6 @@
 import '@/server-init';
 import { NextResponse } from 'next/server';
-import { generateVideos } from '@/lib/video-generation';
+import { generateVideos, SUPPORTED_PROVIDERS, type ProviderKey } from '@/lib/video-generation';
 
 export const runtime = 'nodejs';
 
@@ -8,16 +8,19 @@ export async function POST(request: Request) {
   const startedAt = new Date();
   try {
     const body = (await request.json().catch(() => ({}))) as { numbers?: string[]; provider?: string };
+    const provider = SUPPORTED_PROVIDERS.includes(body.provider as ProviderKey)
+      ? (body.provider as ProviderKey)
+      : undefined;
     console.log('\n[视频生成API] ===============================================================');
     console.log('[视频生成API] 收到请求', {
       startedAt: startedAt.toISOString(),
       method: request.method,
       numbers: body.numbers,
-      provider: body.provider,
+      provider: provider ?? 'default',
       userAgent: request.headers.get('user-agent') ?? 'unknown',
       referer: request.headers.get('referer') ?? 'unknown',
     });
-    const result = await generateVideos({ numbers: body.numbers, provider: body.provider });
+    const result = await generateVideos({ numbers: body.numbers, provider });
     if (!result.success && Array.isArray(result.failed) && result.failed.length) {
       // 单独输出失败任务的编号与失败原因，便于快速排查。
       for (const item of result.failed) {

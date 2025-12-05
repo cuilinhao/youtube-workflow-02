@@ -1,14 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { readAppData, writeAppData } from '@/lib/data-store';
 import type { StyleEntry } from '@/lib/types';
 
 export const runtime = 'nodejs';
+type RouteParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function resolveName(params: RouteParams) {
+  const resolved = await params;
+  const value = resolved?.name;
+  return Array.isArray(value) ? value[0] : value;
+}
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { name: string } },
+  request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const name = decodeURIComponent(params.name);
+  const rawName = await resolveName(params);
+  if (!rawName) {
+    return NextResponse.json({ success: false, message: '风格名称缺失' }, { status: 400 });
+  }
+
+  const name = decodeURIComponent(rawName);
   const payload = (await request.json()) as Partial<StyleEntry> & { name?: string };
   const data = await readAppData();
   const existing = data.styleLibrary[name];
@@ -41,10 +53,15 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { name: string } },
+  _request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const name = decodeURIComponent(params.name);
+  const rawName = await resolveName(params);
+  if (!rawName) {
+    return NextResponse.json({ success: false, message: '风格名称缺失' }, { status: 400 });
+  }
+
+  const name = decodeURIComponent(rawName);
   const data = await readAppData();
   if (!data.styleLibrary[name]) {
     return NextResponse.json({ success: false, message: '风格不存在' }, { status: 404 });

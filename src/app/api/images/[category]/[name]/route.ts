@@ -1,15 +1,29 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { readAppData, writeAppData } from '@/lib/data-store';
 
 export const runtime = 'nodejs';
+type RouteParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function resolveParams(params: RouteParams) {
+  const resolved = await params;
+  const toString = (value?: string | string[]) => (Array.isArray(value) ? value[0] : value);
+  return {
+    category: toString(resolved?.category),
+    name: toString(resolved?.name),
+  };
+}
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { category: string; name: string } },
+  _request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const { category, name } = params;
+  const { category, name } = await resolveParams(params);
+  if (!category || !name) {
+    return NextResponse.json({ success: false, message: '分类或文件名缺失' }, { status: 400 });
+  }
+
   const decodedCategory = decodeURIComponent(category);
   const decodedName = decodeURIComponent(name);
 
@@ -39,7 +53,11 @@ export async function DELETE(
   if (!images.length) {
     delete data.categoryLinks[decodedCategory];
     const dirPath = path.join(process.cwd(), 'public', 'images', decodedCategory);
-    await fs.rm(dirPath, { recursive: true, force: true });
+    try {
+      await fs.rm(dirPath, { recursive: true, force: true });
+    } catch (error) {
+      console.warn('删除分类目录失败', error);
+    }
   }
 
   await writeAppData(data);

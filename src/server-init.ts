@@ -25,11 +25,9 @@ if (proxyUrl) {
       connect: {
         family: 4,
         timeout: 8_000,
-        tls: {
-          minVersion: 'TLSv1.2',
-          maxVersion: 'TLSv1.3',
-          ALPNProtocols: ['http/1.1'],
-        },
+        minVersion: 'TLSv1.2',
+        maxVersion: 'TLSv1.3',
+        ALPNProtocols: ['http/1.1'],
       },
     }),
   );

@@ -1,16 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { readAppData, writeAppData } from '@/lib/data-store';
 import type { ImageReference } from '@/lib/types';
 
 export const runtime = 'nodejs';
+type RouteParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function resolveCategory(params: RouteParams) {
+  const resolved = await params;
+  const category = resolved?.category;
+  return Array.isArray(category) ? category[0] : category;
+}
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { category: string } },
+  request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const { category } = params;
+  const category = await resolveCategory(params);
+  if (!category) {
+    return NextResponse.json({ success: false, message: '分类参数缺失' }, { status: 400 });
+  }
+
   const oldName = decodeURIComponent(category);
   const { name: newNameRaw } = (await request.json()) as { name?: string };
   const newName = newNameRaw?.trim();
@@ -56,10 +67,14 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { category: string } },
+  _request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const { category } = params;
+  const category = await resolveCategory(params);
+  if (!category) {
+    return NextResponse.json({ success: false, message: '分类参数缺失' }, { status: 400 });
+  }
+
   const decoded = decodeURIComponent(category);
 
   const data = await readAppData();

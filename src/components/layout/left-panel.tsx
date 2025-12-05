@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ImageIcon, VideoIcon, ClapperboardIcon, SettingsIcon, PaletteIcon, FolderIcon, KeyIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 export type DashboardTab =
   | 'text-to-image'
@@ -18,56 +19,30 @@ interface LeftPanelProps {
   onTabChange: (tab: DashboardTab) => void;
 }
 
+type NavOption = {
+  id: DashboardTab;
+  title: string;
+  icon: LucideIcon;
+  badge?: string;
+};
+
 export function LeftPanel({ activeTab, onTabChange }: LeftPanelProps) {
-  const createOptions = [
-    {
-      id: 'text-to-image' as const,
-      title: 'Image',
-      icon: ImageIcon,
-    },
-    {
-      id: 'image-to-video' as const,
-      title: 'Video',
-      icon: VideoIcon,
-      badge: 'New',
-    },
+  const createOptions: NavOption[] = [
+    { id: 'text-to-image', title: 'Image', icon: ImageIcon },
+    { id: 'image-to-video', title: 'Video', icon: VideoIcon, badge: 'New' },
   ];
 
-  const workflowOptions = [
-    {
-      id: 'video-workflow' as const,
-      title: 'Workflow',
-      icon: ClapperboardIcon,
-    },
+  const workflowOptions: NavOption[] = [{ id: 'video-workflow', title: 'Workflow', icon: ClapperboardIcon }];
+
+  const libraryOptions: NavOption[] = [
+    { id: 'style-library', title: 'Styles', icon: PaletteIcon },
+    { id: 'reference-library', title: 'Assets', icon: FolderIcon },
+    { id: 'key-manager', title: 'Keys', icon: KeyIcon },
   ];
 
-  const libraryOptions = [
-    {
-      id: 'style-library' as const,
-      title: 'Styles',
-      icon: PaletteIcon,
-    },
-    {
-      id: 'reference-library' as const,
-      title: 'Assets',
-      icon: FolderIcon,
-    },
-    {
-      id: 'key-manager' as const,
-      title: 'Keys',
-      icon: KeyIcon,
-    },
-  ];
+  const settingsOptions: NavOption[] = [{ id: 'settings', title: 'Settings', icon: SettingsIcon }];
 
-  const settingsOptions = [
-    {
-      id: 'settings' as const,
-      title: 'Settings',
-      icon: SettingsIcon,
-    },
-  ];
-
-  const NavItem = ({ option }: { option: typeof createOptions[0] }) => {
+  const NavItem = ({ option }: { option: NavOption }) => {
     const Icon = option.icon;
     const isActive = activeTab === option.id;
 

@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2Icon, FilmIcon, PlayCircleIcon, CropIcon, RotateCcwIcon, CheckSquareIcon } from 'lucide-react';
+import Image from 'next/image';
 import { api, VideoTask } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { VIDEO_ASPECT_RATIO_OPTIONS } from '@/constants/video';
@@ -120,6 +121,20 @@ function getDirectoryPath(raw?: string | null) {
   const segments = normalized.split('/');
   segments.pop(); // 移除文件名
   return segments.join('/');
+}
+
+/**
+ * 格式化任务标识：用于 toast 等提示中精准定位问题任务
+ *  - 优先显示编号，例如 #4
+ *  - 如果提示词存在则截取前缀，帮助用户区分同编号不同内容的场景
+ */
+function formatTaskIdentifier(task: VideoTask, maxPromptLength = 24) {
+  const prompt = task.prompt?.trim().replace(/\s+/g, ' ');
+  if (!prompt) {
+    return `#${task.number}`;
+  }
+  const preview = prompt.length > maxPromptLength ? `${prompt.slice(0, maxPromptLength)}…` : prompt;
+  return `#${task.number}（${preview}）`;
 }
 
 /**
@@ -356,7 +371,7 @@ export function VideoTaskBoard({
       return Promise.all(tasks.map((task) => api.updateVideoTask(task.number, resetPayload)));
     },
     onMutate: async (tasks) => {
-      if (!tasks.length) return undefined;
+      if (!tasks.length) return { previous: undefined };
       await queryClient.cancelQueries({ queryKey: ['video-tasks'] });
       const previous = queryClient.getQueryData<{ videoTasks: VideoTask[] }>(['video-tasks']);
       if (previous) {
@@ -498,13 +513,17 @@ export function VideoTaskBoard({
     if (selectedProvider !== 'yunwu-sora2') {
       const missingImages = actionableTasks.filter((task) => !(task.imageUrls && task.imageUrls[0]));
       if (missingImages.length) {
-        toast.error(`以下任务缺少参考图：${missingImages.map((task) => task.number).join('、')}，请补充后再试。`);
+        // 生成更详细的任务标识，便于用户迅速定位缺图的具体编号
+        const details = missingImages.map((task) => formatTaskIdentifier(task)).join('、');
+        toast.error(`以下任务缺少参考图：${details}，请补充后再试。`);
         return;
       }
     } else {
       const missingPrompts = actionableTasks.filter((task) => !task.prompt?.trim());
       if (missingPrompts.length) {
-        toast.error(`以下任务缺少提示词：${missingPrompts.map((task) => task.number).join('、')}，请补充后再试。`);
+        // 云雾 Sora 2 允许无图，但提示词仍必填，同样给出详细标识
+        const details = missingPrompts.map((task) => formatTaskIdentifier(task)).join('、');
+        toast.error(`以下任务缺少提示词：${details}，请补充后再试。`);
         return;
       }
     }
@@ -968,10 +987,12 @@ export function VideoTaskBoard({
                                 ) : (
                                   <>
                                     {/* 占位图片 */}
-                                    <img
+                                    <Image
                                       src="/aaa.jpg"
                                       alt="视频预览"
-                                      className="w-full h-full object-cover"
+                                      fill
+                                      sizes="(min-width: 1280px) 300px, 100vw"
+                                      className="object-cover"
                                     />
                                     {/* 播放按钮遮罩（仅成功的视频显示） */}
                                     {hasVideo && (

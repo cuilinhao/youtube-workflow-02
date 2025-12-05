@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ShotPromptsResponse, ApiError, ShotPrompt } from '@/lib/types';
 import { validateShotPrompts } from '@/lib/schema-validation';
 import { callOpenRouter, extractJsonArray, normalizeLineEndings, OpenRouterError } from '@/lib/openrouter-client';
+import type { ChatMessage } from '@/lib/openrouter-client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,16 +33,16 @@ export async function POST(request: NextRequest) {
       targetShotCount: shotCount,
     });
 
-    const messages = [
+    const messages: ChatMessage[] = [
       {
-        role: 'system' as const,
+        role: 'system',
         content:
           '你是资深分镜导演，擅长把中文脚本拆解成镜头描述。' +
           '请严格输出 JSON 数组，数组中的每一项仅包含 shot_id 与 image_prompt 字段，' +
           'shot_id 必须从 shot_001 开始按顺序递增且长度一致，image_prompt 需涵盖主体、表情、动作、环境、时间、天气、视角、景别等信息，且使用 LF 换行。',
       },
       {
-        role: 'user' as const,
+        role: 'user',
         content: [
           {
             type: 'text',

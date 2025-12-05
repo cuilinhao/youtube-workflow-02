@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { VideoPromptsResponse, ApiError, VideoPrompt } from '@/lib/types';
 import { validateVideoPrompts } from '@/lib/schema-validation';
 import { callOpenRouter, extractJsonArray, normalizeLineEndings, OpenRouterError } from '@/lib/openrouter-client';
+import type { ChatMessage } from '@/lib/openrouter-client';
 
 function ensureSequentialShotIds(images: Array<{ shot_id: string }>): boolean {
   return images.every((image, index) => image.shot_id === `shot_${(index + 1).toString().padStart(3, '0')}`);
@@ -67,16 +68,16 @@ export async function POST(request: NextRequest) {
       sequential: ensureSequentialShotIds(images),
     });
 
-    const messages = [
+    const messages: ChatMessage[] = [
       {
-        role: 'system' as const,
+        role: 'system',
         content:
           '你是经验丰富的视频导演。请根据脚本和当前镜头顺序，为每个镜头生成图生视频提示词。' +
           '输出必须是 JSON 数组，仅包含 shot_id 与 image_prompt 字段，顺序与输入镜头完全一致。' +
           'image_prompt 需要使用中文一到两句话描述主角的动作、情绪和镜头氛围，不要包含时长、转场、序号等多余信息。',
       },
       {
-        role: 'user' as const,
+        role: 'user',
         content: [
           {
             type: 'text',

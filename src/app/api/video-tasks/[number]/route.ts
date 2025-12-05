@@ -1,19 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { updateAppData } from '@/lib/data-store';
 import type { VideoTask } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
-type RouteContext =
-  | { params: { number: string } }
-  | { params: Promise<{ number: string }> };
+type RouteParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function resolveNumber(params: RouteParams) {
+  const resolved = await params;
+  const value = resolved?.number;
+  return Array.isArray(value) ? value[0] : value;
+}
 
 export async function PATCH(
-  request: Request,
-  context: RouteContext,
+  request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const { number: encodedNumber } = await Promise.resolve(context.params);
-  const number = decodeURIComponent(encodedNumber);
+  const rawNumber = await resolveNumber(params);
+  if (!rawNumber) {
+    return NextResponse.json({ success: false, message: '视频任务编号缺失' }, { status: 400 });
+  }
+
+  const number = decodeURIComponent(rawNumber);
   const payload = (await request.json()) as Partial<VideoTask>;
   if (payload.number && payload.number !== number) {
     delete payload.number;
@@ -39,11 +47,15 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
-  context: RouteContext,
+  _request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const { number: encodedNumber } = await Promise.resolve(context.params);
-  const number = decodeURIComponent(encodedNumber);
+  const rawNumber = await resolveNumber(params);
+  if (!rawNumber) {
+    return NextResponse.json({ success: false, message: '视频任务编号缺失' }, { status: 400 });
+  }
+
+  const number = decodeURIComponent(rawNumber);
   let removed = false;
   await updateAppData((draft) => {
     const index = draft.videoTasks.findIndex((item) => item.number === number);

@@ -35,17 +35,17 @@ export function videoTaskToBaseTask(task: VideoTask, preset: Record<string, unkn
     status: mapStatusToBase(task.status),
     progress: Math.max(0, Math.min(1, (task.progress ?? 0) / 100)),
     input,
-    providerRequestId: task.providerRequestId,
+    providerRequestId: task.providerRequestId ?? undefined,
     attempts: task.attempts ?? 0,
     maxAttempts: task.maxAttempts ?? 3,
     createdAt,
     updatedAt,
     fingerprint,
-    resultUrl: task.remoteUrl,
-    localPath: task.localPath,
-    actualFilename: task.actualFilename,
+    resultUrl: task.remoteUrl ?? undefined,
+    localPath: task.localPath ?? undefined,
+    actualFilename: task.actualFilename ?? undefined,
     errorCode: task.errorMsg ? 'PROVIDER_ERROR' : undefined,
-    errorMessage: task.errorMsg,
+    errorMessage: task.errorMsg ?? undefined,
   };
 }
 

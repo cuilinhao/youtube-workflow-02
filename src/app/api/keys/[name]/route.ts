@@ -1,14 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { readAppData, writeAppData } from '@/lib/data-store';
 import type { KeyEntry } from '@/lib/types';
 
 export const runtime = 'nodejs';
+type RouteParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function resolveName(params: RouteParams) {
+  const resolved = await params;
+  const value = resolved?.name;
+  return Array.isArray(value) ? value[0] : value;
+}
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { name: string } },
+  request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const oldName = decodeURIComponent(params.name);
+  const rawName = await resolveName(params);
+  if (!rawName) {
+    return NextResponse.json({ success: false, message: '名称参数缺失' }, { status: 400 });
+  }
+
+  const oldName = decodeURIComponent(rawName);
   const data = await readAppData();
   const existing = data.keyLibrary[oldName];
 
@@ -42,10 +54,15 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { name: string } },
+  _request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const name = decodeURIComponent(params.name);
+  const rawName = await resolveName(params);
+  if (!rawName) {
+    return NextResponse.json({ success: false, message: '名称参数缺失' }, { status: 400 });
+  }
+
+  const name = decodeURIComponent(rawName);
   const data = await readAppData();
   if (!data.keyLibrary[name]) {
     return NextResponse.json({ success: false, message: '密钥不存在' }, { status: 404 });

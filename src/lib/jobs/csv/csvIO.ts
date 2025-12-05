@@ -88,7 +88,7 @@ export function parseVideoCsv(text: string): CsvRecord[] {
 }
 
 export function serializeVideoCsv(records: CsvRecord[]): string {
-  const header = videoCsvColumns;
+  const header = [...videoCsvColumns];
 
   const rows = records.map((record) => {
     const row: Record<string, string | number | undefined> = {};

@@ -29,7 +29,7 @@ export type GenerateVideosResult =
       failed?: FailedTaskSummary[];
     };
 
-type ProviderKey = 'kie-veo3-fast' | 'yunwu-veo3-fast' | 'yunwu-veo3.1-fast' | 'yunwu-sora2';
+export type ProviderKey = 'kie-veo3-fast' | 'yunwu-veo3-fast' | 'yunwu-veo3.1-fast' | 'yunwu-sora2';
 
 interface GenerateVideosPayload {
   numbers?: string[];
@@ -60,7 +60,7 @@ async function handleTaskUpdate(baseTask: BaseTask) {
   });
 }
 
-const SUPPORTED_PROVIDERS: ProviderKey[] = ['kie-veo3-fast', 'yunwu-veo3-fast', 'yunwu-veo3.1-fast', 'yunwu-sora2'];
+export const SUPPORTED_PROVIDERS: ProviderKey[] = ['kie-veo3-fast', 'yunwu-veo3-fast', 'yunwu-veo3.1-fast', 'yunwu-sora2'];
 
 export async function generateVideos({
   numbers,

@@ -1,14 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { readAppData, writeAppData } from '@/lib/data-store';
 import type { PromptEntry } from '@/lib/types';
 
 export const runtime = 'nodejs';
+type RouteParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function resolveNumber(params: RouteParams) {
+  const resolved = await params;
+  const value = resolved?.number;
+  return Array.isArray(value) ? value[0] : value;
+}
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { number: string } },
+  request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const number = decodeURIComponent(params.number);
+  const rawNumber = await resolveNumber(params);
+  if (!rawNumber) {
+    return NextResponse.json({ success: false, message: '编号参数缺失' }, { status: 400 });
+  }
+
+  const number = decodeURIComponent(rawNumber);
   const payload = (await request.json()) as Partial<PromptEntry> & { prompt?: string };
 
   const data = await readAppData();
@@ -52,10 +64,15 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { number: string } },
+  _request: NextRequest,
+  { params }: { params: RouteParams },
 ) {
-  const number = decodeURIComponent(params.number);
+  const rawNumber = await resolveNumber(params);
+  if (!rawNumber) {
+    return NextResponse.json({ success: false, message: '编号参数缺失' }, { status: 400 });
+  }
+
+  const number = decodeURIComponent(rawNumber);
   const data = await readAppData();
   const index = data.prompts.findIndex((item) => item.number === number);
   if (index < 0) {

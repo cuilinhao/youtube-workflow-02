@@ -28,7 +28,7 @@ export interface VideoTask {
   seeds?: string;
   enableFallback: boolean;
   enableTranslation: boolean;
-  status: PromptStatus | '提交中';
+  status: VideoTaskStatus;
   progress: number;
   localPath?: string | null;
   remoteUrl?: string | null;
@@ -44,6 +44,12 @@ export interface VideoTask {
   startedAt?: string | null;
   finishedAt?: string | null;
 }
+
+export type VideoTaskStatus =
+  | PromptStatus
+  | '提交中'
+  | '任务已提交，等待处理...'
+  | '生成完成，开始下载...';
 
 export interface StyleEntry {
   name: string;

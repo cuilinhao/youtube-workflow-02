@@ -18,6 +18,21 @@ interface GenerationState {
   };
 }
 
+const KNOWN_VIDEO_STATUSES: VideoTask['status'][] = [
+  '等待中',
+  '生成中',
+  '下载中',
+  '成功',
+  '失败',
+  '提交中',
+  '任务已提交，等待处理...',
+  '生成完成，开始下载...',
+];
+
+function normalizeVideoStatus(status: string): VideoTask['status'] {
+  return KNOWN_VIDEO_STATUSES.includes(status as VideoTask['status']) ? (status as VideoTask['status']) : '生成中';
+}
+
 export function useVideoGeneration(options: UseVideoGenerationOptions) {
   const [state, setState] = useState<GenerationState>({});
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
@@ -76,9 +91,10 @@ export function useVideoGeneration(options: UseVideoGenerationOptions) {
           taskId,
           {
             onProgress: (progress, status) => {
-              updateTaskState(number, { progress, status });
-              options.onProgress?.(number, progress, status);
-              api.updateVideoTask(number, { progress, status }).catch(console.error);
+              const normalizedStatus = normalizeVideoStatus(status);
+              updateTaskState(number, { progress, status: normalizedStatus });
+              options.onProgress?.(number, progress, normalizedStatus);
+              api.updateVideoTask(number, { progress, status: normalizedStatus }).catch(console.error);
             },
             onComplete: async (url) => {
               updateTaskState(number, {
