@@ -10,7 +10,15 @@
   "currentStyle": "",
   "customStyleContent": "",
   "categoryLinks": {},
-  "keyLibrary": {},
+  "keyLibrary": {
+    "example": {
+      "name": "example",
+      "apiKey": "YOUR_API_KEY",
+      "platform": "云雾",
+      "createdTime": "2025-01-01T00:00:00.000Z",
+      "lastUsed": "从未使用"
+    }
+  },
   "prompts": [],
   "promptNumbers": {},
   "videoSettings": {
