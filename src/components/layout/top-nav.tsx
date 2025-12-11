@@ -8,7 +8,8 @@ export function TopNav() {
   const { t } = useI18n();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
+    // 顶部导航固定在窗口顶部，滚动时始终可见
+    <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
       <div className="container flex h-14 items-center justify-between px-6">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2">
