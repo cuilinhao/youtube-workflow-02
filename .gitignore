@@ -31,6 +31,8 @@
 
 # app data (local state only)
 data/app-data.json
+# 根目录本地缓存，防止误提交
+app-data.json
 
 # debug
 npm-debug.log*
@@ -47,6 +49,10 @@ public/uploads/
 
 # vercel
 .vercel
+
+# app
+
+app-data.json
 
 # typescript
 *.tsbuildinfo

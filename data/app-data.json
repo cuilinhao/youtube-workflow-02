@@ -3,14 +3,29 @@
     "threadCount": 5,
     "retryCount": 3,
     "savePath": "public/generated_images",
-    "currentKeyName": "",
+    "currentKeyName": "云雾1211",
     "apiPlatform": "云雾"
   },
   "styleLibrary": {},
   "currentStyle": "",
   "customStyleContent": "",
   "categoryLinks": {},
-  "keyLibrary": {},
+  "keyLibrary": {
+    "云雾1211": {
+      "name": "云雾1211",
+      "apiKey": "sk-eOb2kUhkaHWJUEr3HSmTHMJl2xz2pIG2hTeXiw8KklRiGash",
+      "platform": "云雾",
+      "createdTime": "2025-12-11T09:16:04.718Z",
+      "lastUsed": "从未使用"
+    },
+    "kie": {
+      "name": "kie",
+      "apiKey": "a0d601be40ab985e269fa28916b1d724",
+      "platform": "KIE.AI",
+      "createdTime": "2025-12-11T09:16:21.332Z",
+      "lastUsed": "从未使用"
+    }
+  },
   "prompts": [],
   "promptNumbers": {},
   "videoSettings": {

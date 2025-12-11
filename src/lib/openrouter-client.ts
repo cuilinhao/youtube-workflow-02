@@ -44,10 +44,27 @@ interface CallOptions {
 const OPENROUTER_API_URL = process.env.OPENROUTER_API_URL ?? 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODEL = 'anthropic/claude-sonnet-4.5';
 
+// 仅记录一次完整来源，避免重复噪音。
+let hasLoggedOpenrouterKey = false;
+
 function getApiKey(): string {
-  const key = process.env.OPENROUTER_API_KEY?.trim();
+  const raw = process.env.OPENROUTER_API_KEY;
+  const key = raw?.trim();
   if (!key) {
+    console.error('[OpenRouter] OPENROUTER_API_KEY 未配置或为空', {
+      envDefined: typeof raw === 'string',
+      trimmedLength: raw?.trim()?.length ?? 0,
+      apiUrl: OPENROUTER_API_URL,
+    });
     throw new Error('未配置 OPENROUTER_API_KEY 环境变量');
+  }
+  if (!hasLoggedOpenrouterKey) {
+    console.info('[OpenRouter] 使用 OPENROUTER_API_KEY', {
+      source: 'env',
+      maskedKey: maskToken(key),
+      apiUrl: OPENROUTER_API_URL,
+    });
+    hasLoggedOpenrouterKey = true;
   }
   return key;
 }
