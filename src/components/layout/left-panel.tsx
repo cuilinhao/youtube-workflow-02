@@ -55,10 +55,11 @@ export function LeftPanel({ activeTab, onTabChange }: LeftPanelProps) {
       <button
         onClick={() => onTabChange(option.id)}
         className={cn(
+          // Default to浅色风格，dark:为暗色模式下的对照样式
           'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
           isActive
-            ? 'bg-white/10 text-white'
-            : 'text-gray-400 hover:text-white hover:bg-white/5'
+            ? 'bg-gray-100 text-gray-900 dark:bg-white/10 dark:text-white'
+            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/5'
         )}
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
@@ -73,12 +74,12 @@ export function LeftPanel({ activeTab, onTabChange }: LeftPanelProps) {
   };
 
   return (
-    <aside className="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-[240px] bg-[#1a1a1a] border-r border-white/10">
+    <aside className="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-[240px] bg-white border-r border-gray-200 dark:bg-[#1a1a1a] dark:border-white/10">
       <ScrollArea className="h-full">
         <div className="p-4 space-y-6">
           {/* AI Create Section */}
           <div className="space-y-2">
-            <h2 className="px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+            <h2 className="px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
               {t('sidebar.section.create')}
             </h2>
             <div className="space-y-1">
@@ -107,7 +108,7 @@ export function LeftPanel({ activeTab, onTabChange }: LeftPanelProps) {
           </div>
 
           {/* Divider */}
-          <div className="h-px bg-white/10" />
+          <div className="h-px bg-gray-200 dark:bg-white/10" />
 
           {/* Settings Section */}
           <div className="space-y-1">
