@@ -59,6 +59,8 @@ type VideoProviderOption = (typeof VIDEO_PROVIDER_OPTIONS)[number]['value'];
  * @property {boolean} showGenerateButton - 是否显示生成视频按钮
  * @property {string[]} highlightNumbers - 需要高亮显示的任务编号列表
  * @property {string} className - 自定义CSS类名
+ * @property {string} headerTitle - 顶部卡片标题，便于复用到“文生视频”等入口
+ * @property {string} headerDescription - 顶部卡片描述文案
  */
 interface VideoTaskBoardProps {
   variant?: 'default' | 'embedded';
@@ -66,6 +68,8 @@ interface VideoTaskBoardProps {
   showGenerateButton?: boolean;
   highlightNumbers?: string[];
   className?: string;
+  headerTitle?: string;
+  headerDescription?: string;
 }
 
 /**
@@ -155,6 +159,8 @@ export function VideoTaskBoard({
   showGenerateButton = true,
   highlightNumbers = [],
   className,
+  headerTitle = '🎬 图生视频任务',
+  headerDescription = '批量生成 Veo3 视频任务列表',
 }: VideoTaskBoardProps = {}) {
   const queryClient = useQueryClient();
 
@@ -727,9 +733,9 @@ export function VideoTaskBoard({
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center gap-2">
-                  🎬 图生视频任务
+                  {headerTitle}
                 </CardTitle>
-                <CardDescription className="text-base text-slate-600">批量生成 Veo3 视频任务列表</CardDescription>
+                <CardDescription className="text-base text-slate-600">{headerDescription}</CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-4 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200 shadow-sm">

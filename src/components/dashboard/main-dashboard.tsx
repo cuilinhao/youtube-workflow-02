@@ -18,6 +18,7 @@ function isDashboardTab(value: string): value is DashboardTab {
   return (
     value === 'text-to-image' ||
     value === 'image-to-video' ||
+    value === 'text-to-video' ||
     value === 'video-workflow' ||
     value === 'settings' ||
     value === 'style-library' ||
@@ -74,6 +75,17 @@ export function MainDashboard() {
                 <p className="text-sm text-gray-600">{t('main.imageToVideo.subtitle')}</p>
               </div>
               <VideoTaskBoard />
+            </div>
+          )}
+
+          {activeTab === 'text-to-video' && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold text-gray-900">{t('main.textToVideo.title')}</h2>
+                <p className="text-sm text-gray-600">{t('main.textToVideo.subtitle')}</p>
+              </div>
+              {/* 复用图生视频的看板与表单逻辑，仅更换文案 */}
+              <VideoTaskBoard headerTitle="🎬 文生视频任务" headerDescription="批量生成 Veo3 文生视频任务列表" />
             </div>
           )}
 

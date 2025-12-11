@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n';
 export type DashboardTab =
   | 'text-to-image'
   | 'image-to-video'
+  | 'text-to-video'
   | 'video-workflow'
   | 'settings'
   | 'style-library'
@@ -33,6 +34,7 @@ export function LeftPanel({ activeTab, onTabChange }: LeftPanelProps) {
   const createOptions: NavOption[] = [
     { id: 'text-to-image', title: t('sidebar.tab.textToImage'), icon: ImageIcon },
     { id: 'image-to-video', title: t('sidebar.tab.imageToVideo'), icon: VideoIcon, badge: t('sidebar.badge.new') },
+    { id: 'text-to-video', title: t('sidebar.tab.textToVideo'), icon: VideoIcon, badge: t('sidebar.badge.new') },
   ];
 
   const workflowOptions: NavOption[] = [
