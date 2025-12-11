@@ -12,6 +12,7 @@ import { SettingsCenter } from './settings-center';
 import { StyleLibrary } from './style-library';
 import { ReferenceLibrary } from './reference-library';
 import { KeyManager } from './key-manager';
+import { useI18n } from '@/lib/i18n';
 
 function isDashboardTab(value: string): value is DashboardTab {
   return (
@@ -29,6 +30,7 @@ export function MainDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<DashboardTab>('text-to-image');
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!searchParams) return;
@@ -58,8 +60,8 @@ export function MainDashboard() {
           {activeTab === 'text-to-image' && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold text-gray-900">批量文生图</h2>
-                <p className="text-sm text-gray-600">管理提示词，批量生成 AI 图片</p>
+                <h2 className="text-2xl font-semibold text-gray-900">{t('main.textToImage.title')}</h2>
+                <p className="text-sm text-gray-600">{t('main.textToImage.subtitle')}</p>
               </div>
               <PromptManager />
             </div>
@@ -68,8 +70,8 @@ export function MainDashboard() {
           {activeTab === 'image-to-video' && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold text-gray-900">批量图生视频</h2>
-                <p className="text-sm text-gray-600">使用 Veo3 将图片转换为视频</p>
+                <h2 className="text-2xl font-semibold text-gray-900">{t('main.imageToVideo.title')}</h2>
+                <p className="text-sm text-gray-600">{t('main.imageToVideo.subtitle')}</p>
               </div>
               <VideoTaskBoard />
             </div>
@@ -78,8 +80,8 @@ export function MainDashboard() {
           {activeTab === 'video-workflow' && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold text-gray-900">视频生成工作流</h2>
-                <p className="text-sm text-gray-600">从文本脚本到视频提示词的完整工作流程</p>
+                <h2 className="text-2xl font-semibold text-gray-900">{t('main.videoWorkflow.title')}</h2>
+                <p className="text-sm text-gray-600">{t('main.videoWorkflow.subtitle')}</p>
               </div>
               <VideoWorkflow />
             </div>
@@ -88,8 +90,8 @@ export function MainDashboard() {
           {activeTab === 'settings' && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold text-gray-900">设置中心</h2>
-                <p className="text-sm text-gray-600">配置批量出图与图生视频的全局参数</p>
+                <h2 className="text-2xl font-semibold text-gray-900">{t('main.settings.title')}</h2>
+                <p className="text-sm text-gray-600">{t('main.settings.subtitle')}</p>
               </div>
               <SettingsCenter />
             </div>
@@ -98,8 +100,8 @@ export function MainDashboard() {
           {activeTab === 'style-library' && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold text-gray-900">风格库</h2>
-                <p className="text-sm text-gray-600">维护常用风格模板，便于批量应用</p>
+                <h2 className="text-2xl font-semibold text-gray-900">{t('main.styleLibrary.title')}</h2>
+                <p className="text-sm text-gray-600">{t('main.styleLibrary.subtitle')}</p>
               </div>
               <StyleLibrary />
             </div>
@@ -108,8 +110,8 @@ export function MainDashboard() {
           {activeTab === 'reference-library' && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold text-gray-900">参考图库</h2>
-                <p className="text-sm text-gray-600">集中管理出图所需的参考素材</p>
+                <h2 className="text-2xl font-semibold text-gray-900">{t('main.referenceLibrary.title')}</h2>
+                <p className="text-sm text-gray-600">{t('main.referenceLibrary.subtitle')}</p>
               </div>
               <ReferenceLibrary />
             </div>
@@ -118,8 +120,8 @@ export function MainDashboard() {
           {activeTab === 'key-manager' && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold text-gray-900">密钥库</h2>
-                <p className="text-sm text-gray-600">统一维护各平台 API Key 与默认密钥</p>
+                <h2 className="text-2xl font-semibold text-gray-900">{t('main.keyManager.title')}</h2>
+                <p className="text-sm text-gray-600">{t('main.keyManager.subtitle')}</p>
               </div>
               <KeyManager />
             </div>

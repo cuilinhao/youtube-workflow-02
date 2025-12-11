@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ImageIcon, VideoIcon, ClapperboardIcon, SettingsIcon, PaletteIcon, FolderIcon, KeyIcon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 export type DashboardTab =
   | 'text-to-image'
@@ -27,20 +28,24 @@ type NavOption = {
 };
 
 export function LeftPanel({ activeTab, onTabChange }: LeftPanelProps) {
+  const { t } = useI18n();
+
   const createOptions: NavOption[] = [
-    { id: 'text-to-image', title: 'Image', icon: ImageIcon },
-    { id: 'image-to-video', title: 'Video', icon: VideoIcon, badge: 'New' },
+    { id: 'text-to-image', title: t('sidebar.tab.textToImage'), icon: ImageIcon },
+    { id: 'image-to-video', title: t('sidebar.tab.imageToVideo'), icon: VideoIcon, badge: t('sidebar.badge.new') },
   ];
 
-  const workflowOptions: NavOption[] = [{ id: 'video-workflow', title: 'Workflow', icon: ClapperboardIcon }];
+  const workflowOptions: NavOption[] = [
+    { id: 'video-workflow', title: t('sidebar.tab.videoWorkflow'), icon: ClapperboardIcon },
+  ];
 
   const libraryOptions: NavOption[] = [
-    { id: 'style-library', title: 'Styles', icon: PaletteIcon },
-    { id: 'reference-library', title: 'Assets', icon: FolderIcon },
-    { id: 'key-manager', title: 'Keys', icon: KeyIcon },
+    { id: 'style-library', title: t('sidebar.tab.styleLibrary'), icon: PaletteIcon },
+    { id: 'reference-library', title: t('sidebar.tab.referenceLibrary'), icon: FolderIcon },
+    { id: 'key-manager', title: t('sidebar.tab.keyManager'), icon: KeyIcon },
   ];
 
-  const settingsOptions: NavOption[] = [{ id: 'settings', title: 'Settings', icon: SettingsIcon }];
+  const settingsOptions: NavOption[] = [{ id: 'settings', title: t('sidebar.tab.settings'), icon: SettingsIcon }];
 
   const NavItem = ({ option }: { option: NavOption }) => {
     const Icon = option.icon;
@@ -74,7 +79,7 @@ export function LeftPanel({ activeTab, onTabChange }: LeftPanelProps) {
           {/* AI Create Section */}
           <div className="space-y-2">
             <h2 className="px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-              AI Create
+              {t('sidebar.section.create')}
             </h2>
             <div className="space-y-1">
               {createOptions.map((option) => (
