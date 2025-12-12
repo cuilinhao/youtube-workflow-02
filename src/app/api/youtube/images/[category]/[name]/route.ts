@@ -1,0 +1,66 @@
+import { NextResponse, type NextRequest } from 'next/server';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { readAppData, writeAppData } from '@youtube/lib/data-store';
+
+export const runtime = 'nodejs';
+type RouteParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function resolveParams(params: RouteParams) {
+  const resolved = await params;
+  const toString = (value?: string | string[]) => (Array.isArray(value) ? value[0] : value);
+  return {
+    category: toString(resolved?.category),
+    name: toString(resolved?.name),
+  };
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: RouteParams },
+) {
+  const { category, name } = await resolveParams(params);
+  if (!category || !name) {
+    return NextResponse.json({ success: false, message: '分类或文件名缺失' }, { status: 400 });
+  }
+
+  const decodedCategory = decodeURIComponent(category);
+  const decodedName = decodeURIComponent(name);
+
+  const data = await readAppData();
+  const images = data.categoryLinks[decodedCategory];
+
+  if (!images) {
+    return NextResponse.json({ success: false, message: '分类不存在' }, { status: 404 });
+  }
+
+  const index = images.findIndex((item) => item.name === decodedName);
+  if (index < 0) {
+    return NextResponse.json({ success: false, message: '图片不存在' }, { status: 404 });
+  }
+
+  const [removed] = images.splice(index, 1);
+
+  if (removed?.path) {
+    const filePath = path.join(process.cwd(), 'public', removed.path);
+    try {
+      await fs.unlink(filePath);
+    } catch (error) {
+      console.warn('删除图片文件失败', error);
+    }
+  }
+
+  if (!images.length) {
+    delete data.categoryLinks[decodedCategory];
+    const dirPath = path.join(process.cwd(), 'public', 'images', decodedCategory);
+    try {
+      await fs.rm(dirPath, { recursive: true, force: true });
+    } catch (error) {
+      console.warn('删除分类目录失败', error);
+    }
+  }
+
+  await writeAppData(data);
+
+  return NextResponse.json({ success: true });
+}

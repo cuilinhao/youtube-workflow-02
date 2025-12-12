@@ -13,6 +13,8 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
 
 # next.js
 /.next/
@@ -50,10 +52,10 @@ public/uploads/
 # vercel
 .vercel
 
-# app
-
-app-data.json
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backups / local experiments
+/_backup_before_youtube/
+/.source/
