@@ -85,16 +85,16 @@ export default function CreateVideoTaskPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f]">
+    <div className="min-h-screen bg-background text-foreground">
       <TopNav />
       <LeftPanel activeTab="image-to-video" onTabChange={handleTabChange} />
 
-      <main className="ml-[240px] mt-14 min-h-[calc(100vh-3.5rem)] pb-16 bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <main className="ml-[240px] mt-14 min-h-[calc(100vh-3.5rem)] pb-16 bg-gradient-to-br from-muted/40 via-background to-muted/40">
         <div className="h-full space-y-6 p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-gray-900">新建图生视频任务</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-2xl font-semibold">新建图生视频任务</h2>
+              <p className="text-sm text-muted-foreground">
                 填写 Veo3 视频提示词与参考图，创建新的批量生成任务。
               </p>
             </div>
@@ -103,7 +103,7 @@ export default function CreateVideoTaskPage() {
             </Button>
           </div>
 
-          <Card className="shadow-sm border border-slate-200">
+          <Card className="shadow-sm border border-border">
             <CardHeader>
               <CardTitle>任务配置</CardTitle>
               <CardDescription>
@@ -133,4 +133,3 @@ export default function CreateVideoTaskPage() {
     </div>
   );
 }
-
