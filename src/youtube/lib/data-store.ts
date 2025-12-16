@@ -1,21 +1,58 @@
-import { promises as fs } from 'fs';
-import path from 'path';
 import type { AppData, UpdatePayload } from './types';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DATA_FILE = path.join(DATA_DIR, 'app-data.json');
+type NodeFs = typeof import('node:fs/promises');
+type NodePath = typeof import('node:path');
+type NodeOs = typeof import('node:os');
+
+type NodeModules = {
+  fs: NodeFs;
+  path: NodePath;
+  os: NodeOs;
+};
+
+function unwrapDefault<T>(mod: unknown): T {
+  const value = mod as { default?: unknown };
+  return (value?.default ?? mod) as T;
+}
+
+let nodeModulesPromise: Promise<NodeModules | null> | null = null;
+async function getNodeModules(): Promise<NodeModules | null> {
+  if (!nodeModulesPromise) {
+    nodeModulesPromise = (async () => {
+      try {
+        const [fs, path, os] = await Promise.all([
+          import('node:fs/promises'),
+          import('node:path'),
+          import('node:os'),
+        ]);
+        return {
+          fs,
+          path: unwrapDefault<NodePath>(path),
+          os: unwrapDefault<NodeOs>(os),
+        };
+      } catch (error) {
+        console.warn('[data-store] Node filesystem modules unavailable, fallback to in-memory store.', error);
+        return null;
+      }
+    })();
+  }
+  return nodeModulesPromise;
+}
+
+let dataFilePathPromise: Promise<string | null> | null = null;
+let inMemoryData: AppData | null = null;
 
 let writeQueue: Promise<unknown> = Promise.resolve();
 
-async function writeFileAtomically(targetPath: string, contents: string) {
-  const directory = path.dirname(targetPath);
-  const tempName = `.tmp-${path.basename(targetPath)}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const tempPath = path.join(directory, tempName);
+async function writeFileAtomically(mods: NodeModules, targetPath: string, contents: string) {
+  const directory = mods.path.dirname(targetPath);
+  const tempName = `.tmp-${mods.path.basename(targetPath)}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const tempPath = mods.path.join(directory, tempName);
   try {
-    await fs.writeFile(tempPath, contents, 'utf-8');
-    await fs.rename(tempPath, targetPath);
+    await mods.fs.writeFile(tempPath, contents, 'utf-8');
+    await mods.fs.rename(tempPath, targetPath);
   } catch (error) {
-    await fs.rm(tempPath, { force: true }).catch(() => {
+    await mods.fs.rm(tempPath, { force: true }).catch(() => {
       /* noop */
     });
     throw error;
@@ -53,43 +90,174 @@ function createDefaultAppData(): AppData {
   };
 }
 
-async function ensureDataFile(): Promise<void> {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.access(DATA_FILE);
-  } catch {
-    const defaultFile = path.join(process.cwd(), 'data', 'app-data.json');
+function normalizeAppData(raw: unknown): AppData {
+  const defaults = createDefaultAppData();
+  if (!raw || typeof raw !== 'object') {
+    return defaults;
+  }
+
+  const data = raw as Partial<AppData>;
+  const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === 'object' && !Array.isArray(value);
+
+  return {
+    ...defaults,
+    ...data,
+    apiSettings: {
+      ...defaults.apiSettings,
+      ...(isPlainObject(data.apiSettings) ? data.apiSettings : {}),
+    },
+    videoSettings: {
+      ...defaults.videoSettings,
+      ...(isPlainObject(data.videoSettings) ? data.videoSettings : {}),
+    },
+    styleLibrary: isPlainObject(data.styleLibrary) ? (data.styleLibrary as AppData['styleLibrary']) : defaults.styleLibrary,
+    categoryLinks: isPlainObject(data.categoryLinks) ? (data.categoryLinks as AppData['categoryLinks']) : defaults.categoryLinks,
+    keyLibrary: isPlainObject(data.keyLibrary) ? (data.keyLibrary as AppData['keyLibrary']) : defaults.keyLibrary,
+    prompts: Array.isArray(data.prompts) ? data.prompts : defaults.prompts,
+    promptNumbers: isPlainObject(data.promptNumbers) ? (data.promptNumbers as AppData['promptNumbers']) : defaults.promptNumbers,
+    videoTasks: Array.isArray(data.videoTasks) ? data.videoTasks : defaults.videoTasks,
+    generatedImages: isPlainObject(data.generatedImages) ? (data.generatedImages as AppData['generatedImages']) : defaults.generatedImages,
+    generatedVideos: Array.isArray(data.generatedVideos) ? data.generatedVideos : defaults.generatedVideos,
+    currentStyle: typeof data.currentStyle === 'string' ? data.currentStyle : defaults.currentStyle,
+    customStyleContent: typeof data.customStyleContent === 'string' ? data.customStyleContent : defaults.customStyleContent,
+  };
+}
+
+function needsSchemaRepair(data: Partial<AppData>): boolean {
+  return (
+    data.apiSettings === undefined ||
+    data.videoSettings === undefined ||
+    data.styleLibrary === undefined ||
+    data.prompts === undefined ||
+    data.promptNumbers === undefined ||
+    data.keyLibrary === undefined ||
+    data.videoTasks === undefined ||
+    data.generatedImages === undefined ||
+    data.generatedVideos === undefined
+  );
+}
+
+function getEnvVar(name: string): string | undefined {
+  if (typeof process === 'undefined' || !process?.env) {
+    return undefined;
+  }
+  return process.env[name];
+}
+
+async function resolveDataFilePath(): Promise<string | null> {
+  const mods = await getNodeModules();
+  if (!mods) {
+    return null;
+  }
+
+  const envFile = getEnvVar('YOUTUBE_APP_DATA_FILE')?.trim();
+  const envDir = getEnvVar('YOUTUBE_DATA_DIR')?.trim();
+  const cwd = typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '';
+
+  const candidates: string[] = [];
+  if (envFile) {
+    candidates.push(envFile);
+  }
+  if (envDir) {
+    candidates.push(mods.path.join(envDir, 'app-data.json'));
+  }
+  if (cwd) {
+    candidates.push(mods.path.join(cwd, 'data', 'app-data.json'));
+  }
+  candidates.push(mods.path.join(mods.os.tmpdir(), 'youtube-workflow', 'app-data.json'));
+
+  const defaultContents = JSON.stringify(createDefaultAppData(), null, 2);
+  for (const filePath of candidates) {
     try {
-      const buffer = await fs.readFile(defaultFile, 'utf-8');
-      await writeFileAtomically(DATA_FILE, buffer);
-    } catch {
-      await writeFileAtomically(DATA_FILE, JSON.stringify(createDefaultAppData(), null, 2));
+      await mods.fs.mkdir(mods.path.dirname(filePath), { recursive: true });
+      await mods.fs.access(filePath).catch(async () => {
+        await writeFileAtomically(mods, filePath, defaultContents);
+      });
+      return filePath;
+    } catch (error) {
+      console.warn('[data-store] Failed to access data file, trying next candidate:', filePath, error);
     }
   }
+
+  return null;
+}
+
+async function ensureDataFile(): Promise<{ mods: NodeModules; filePath: string } | null> {
+  if (!dataFilePathPromise) {
+    dataFilePathPromise = resolveDataFilePath();
+  }
+  const filePath = await dataFilePathPromise;
+  const mods = await getNodeModules();
+  if (!mods || !filePath) {
+    return null;
+  }
+  return { mods, filePath };
 }
 
 export async function readAppData(): Promise<AppData> {
-  await ensureDataFile();
+  const ensured = await ensureDataFile();
+  if (!ensured) {
+    inMemoryData ??= createDefaultAppData();
+    return inMemoryData;
+  }
+
   try {
     await writeQueue;
   } catch {
     // Ignore write failures here; subsequent read will attempt to continue.
   }
-  const raw = await fs.readFile(DATA_FILE, 'utf-8');
+
+  let raw: string;
   try {
-    return JSON.parse(raw) as AppData;
+    raw = await ensured.mods.fs.readFile(ensured.filePath, 'utf-8');
+  } catch (error) {
+    console.error('[data-store] Failed to read app-data.json, fallback to default state', error);
+    const fallback = createDefaultAppData();
+    inMemoryData = fallback;
+    try {
+      await writeFileAtomically(ensured.mods, ensured.filePath, JSON.stringify(fallback, null, 2));
+    } catch (writeError) {
+      console.warn('[data-store] Failed to write fallback app-data.json, keep in-memory only', writeError);
+    }
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<AppData>;
+    const normalized = normalizeAppData(parsed);
+    inMemoryData = normalized;
+
+    if (needsSchemaRepair(parsed)) {
+      try {
+        await writeFileAtomically(ensured.mods, ensured.filePath, JSON.stringify(normalized, null, 2));
+      } catch (writeError) {
+        console.warn('[data-store] Failed to repair app-data.json schema, keep in-memory only', writeError);
+      }
+    }
+
+    return normalized;
   } catch (error) {
     console.error('[data-store] Failed to parse app-data.json, restoring default state', error);
     const fallback = createDefaultAppData();
-    await writeFileAtomically(DATA_FILE, JSON.stringify(fallback, null, 2));
+    inMemoryData = fallback;
+    try {
+      await writeFileAtomically(ensured.mods, ensured.filePath, JSON.stringify(fallback, null, 2));
+    } catch (writeError) {
+      console.warn('[data-store] Failed to write fallback app-data.json, keep in-memory only', writeError);
+    }
     return fallback;
   }
 }
 
 export async function writeAppData(data: AppData): Promise<void> {
-  await ensureDataFile();
+  const ensured = await ensureDataFile();
+  inMemoryData = data;
+  if (!ensured) {
+    return;
+  }
   const write = async () => {
-    await writeFileAtomically(DATA_FILE, JSON.stringify(data, null, 2));
+    await writeFileAtomically(ensured.mods, ensured.filePath, JSON.stringify(data, null, 2));
   };
   writeQueue = writeQueue.then(write, write);
   await writeQueue;
